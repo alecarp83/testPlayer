@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test — Player Model</title>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: radial-gradient(ellipse at top, #2a3048, #0e1018 60%);
+      color: #eaf2ff;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      display: grid; place-items: center;
+      padding: 20px;
+    }
+    .panel {
+      width: min(900px, 100%);
+      background: #1a1f30;
+      border: 1px solid #2e3550;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    #viewport {
+      width: 100%; height: 480px;
+      background: radial-gradient(ellipse at 50% 40%, #35405e, #141826 70%);
+    }
+    .controls {
+      padding: 16px 20px;
+      border-top: 1px solid #2e3550;
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    }
+    .swatch {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.3);
+      cursor: pointer;
+    }
+    label { font-size: 12px; color: #9daac3; }
+    button {
+      padding: 8px 14px; border-radius: 8px;
+      background: #252c44; color: #eaf2ff;
+      border: 1px solid #37415e; cursor: pointer;
+    }
+    button:hover { background: #2f3855; }
+    button.active { background: #8de8ff; color: #142026; border-color: #8de8ff; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div id="viewport"></div>
+    <div class="controls">
+      <div class="row">
+        <label>Piel</label><input type="color" id="c-piel" value="#d9a67e">
+        <label>Ropa</label><input type="color" id="c-ropa" value="#4a3f8a">
+        <label>Pantalón</label><input type="color" id="c-pantalon" value="#28243f">
+        <label>Pelo</label><input type="color" id="c-pelo" value="#5a4f8a">
+        <label>Acento</label><input type="color" id="c-acento" value="#8de8ff">
+      </div>
+      <div class="row">
+        <button data-action="idle" class="active">Idle</button>
+        <button data-action="walk">Caminar</button>
+        <button data-action="jump">Saltar</button>
+        <button data-action="attack">Atacar</button>
+        <button data-action="carry">Cargar</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { createPlayerModel, NATSUO_COLORS } from './player/player-model.js';
+
+    const viewport = document.getElementById('viewport');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(viewport.clientWidth, viewport.clientHeight, false);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.9;
+    viewport.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.set(3.5, 2.8, 5.5);
+    camera.lookAt(0, 1.4, 0);
+
+    scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x222831, 0.8));
+    const key = new THREE.DirectionalLight(0xffffff, 2.4);
+    key.position.set(4, 6, 4);
+    key.castShadow = true;
+    key.shadow.mapSize.set(1024, 1024);
+    key.shadow.camera.left = -3;
+    key.shadow.camera.right = 3;
+    key.shadow.camera.top = 4;
+    key.shadow.camera.bottom = -1;
+    scene.add(key);
+
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(3, 48),
+      new THREE.MeshStandardMaterial({ color: 0x1b2740, roughness: 0.9 })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const playerModel = createPlayerModel({ THREE, colors: NATSUO_COLORS });
+    scene.add(playerModel.group);
+    const { torso, head, armL, armR, legL, legR } = playerModel.parts;
+
+    /* --- Animación simple (idle/walk/jump/attack/carry) --- */
+    let action = 'idle';
+    let time = 0;
+
+    function animate(dt) {
+      time += dt;
+      torso.rotation.set(0, 0, 0);
+      head.rotation.set(0, 0, 0);
+      armL.rotation.set(0, 0, 0);
+      armR.rotation.set(0, 0, 0);
+      legL.rotation.set(0, 0, 0);
+      legR.rotation.set(0, 0, 0);
+
+      const s = Math.sin(time * 6);
+
+      if (action === 'idle') {
+        const b = Math.sin(time * 2) * 0.03;
+        armL.rotation.x = b;
+        armR.rotation.x = -b;
+        torso.position.y = 1.12 + Math.sin(time * 1.6) * 0.02;
+      } else if (action === 'walk') {
+        legL.rotation.x = s * 0.7;
+        legR.rotation.x = -s * 0.7;
+        armL.rotation.x = -s * 0.5;
+        armR.rotation.x = s * 0.5;
+      } else if (action === 'jump') {
+        armL.rotation.z = -2.2;
+        armR.rotation.z = 2.2;
+        legL.rotation.x = 0.3;
+        legR.rotation.x = -0.3;
+      } else if (action === 'attack') {
+        const k = (Math.sin(time * 5) + 1) / 2;
+        armL.rotation.x = -k * 2.5;
+        torso.rotation.x = k * 0.2;
+      } else if (action === 'carry') {
+        armL.rotation.x = -Math.PI + 0.15;
+        armL.rotation.z = 0.15;
+        armR.rotation.x = -Math.PI + 0.15;
+        armR.rotation.z = -0.15;
+      }
+    }
+
+    /* --- Resize --- */
+    function resize() {
+      const w = viewport.clientWidth;
+      const h = viewport.clientHeight;
+      if (!w || !h) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    new ResizeObserver(resize).observe(viewport);
+    resize();
+
+    /* --- Color pickers --- */
+    const colorIds = ['piel', 'ropa', 'pantalon', 'pelo', 'acento'];
+    const currentColors = { ...NATSUO_COLORS };
+    colorIds.forEach((id) => {
+      const input = document.getElementById('c-' + id);
+      input.addEventListener('input', () => {
+        currentColors[id] = input.value;
+        playerModel.setColors(currentColors);
+      });
+    });
+
+    /* --- Botones de acción --- */
+    document.querySelectorAll('button[data-action]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        action = btn.dataset.action;
+        document.querySelectorAll('button[data-action]').forEach((b) =>
+          b.classList.toggle('active', b === btn)
+        );
+      });
+    });
+
+    /* --- Loop --- */
+    let last = performance.now();
+    function loop() {
+      requestAnimationFrame(loop);
+      const now = performance.now();
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      animate(dt);
+      renderer.render(scene, camera);
+    }
+    loop();
+  </script>
+</body>
+</html>
