@@ -24,9 +24,9 @@
     // ---------------------------------------------------------------
     // Acciones de la barra inferior (emotes / ataques).
     // "Saltar" YA NO está aquí: es acción física con botón propio.
-    // ---------------------------------------------------------------
+    // --------------------------------------------------------------- dur: Math.PI / 6
     acciones: [
-      { anim: "Atacar (golpe de puño)", label: "Atacar",  em: "👊", tecla: "KeyF",   kbd: "F", tipo: "unica", dur: Math.PI / 6 },
+      { anim: "Atacar (golpe de puño)", label: "Atacar",  em: "👊", tecla: "KeyF",   kbd: "F", tipo: "unica", dur: 0.30 }, 
       { anim: "Baile 1",                 label: "Bailar 1", em: "🕺", tecla: "Digit1", kbd: "1", tipo: "emote" },
       { anim: "Baile 2",                 label: "Bailar 2", em: "💃", tecla: "Digit2", kbd: "2", tipo: "emote" },
       { anim: "Baile 3",                 label: "Bailar 3", em: "🤖", tecla: "Digit3", kbd: "3", tipo: "emote" },
