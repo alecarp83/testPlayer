@@ -231,7 +231,7 @@
     buffers.salto = await renderEfecto(EFECTOS["move-jump"], baseSeed ^ 0x1111);
 
     // Aterrizaje
-    buffers.aterrizaje = await renderEfecto(EFECTOS["move-land"], baseSeed ^ 0x2222);
+    //buffers.aterrizaje = await renderEfecto(EFECTOS["move-land"], baseSeed ^ 0x2222);
 
     // 3 variantes de paso
     const n = config.sonidos.paso.variantes || 1;
