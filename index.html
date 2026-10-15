@@ -1,1102 +1,730 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <meta name="theme-color" content="#10121b">
-  <title>Character Lab - Aventura</title>
-  <style>
-    :root {
-      --bg: #10121b; --panel: rgba(20, 23, 36, .72); --line: rgba(255,255,255,.12);
-      --text: #f1f2fa; --muted: #a9b0c8; --accent: #c4ff83;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg);
-      font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: var(--text); }
-    button, input { font: inherit; color: inherit; }
-    button { cursor: pointer; }
-    #mundo { position: fixed; inset: 0; touch-action: none; cursor: grab; }
-    #mundo:active { cursor: grabbing; }
-    #mundo canvas { display: block; width: 100%; height: 100%; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#11152d">
+<title>Una aventura para celebrar</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
-    .glass { background: var(--panel); border: 1px solid var(--line);
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+:root {
+  --ink: #202044;
+  --violet: #7656ff;
+  --mint: #baffdf;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #c8c5ed;
+  font-family: 'Outfit', system-ui, sans-serif;
+  color: white;
+}
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible {
+  outline: 3px solid #57e7c1;
+  outline-offset: 5px;
+}
+canvas { display: block; touch-action: none; }
+#world { position: fixed; inset: 0; }
+.hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  padding: max(24px, env(safe-area-inset-top)) 28px;
+}
+.top { display: flex; justify-content: space-between; gap: 20px; }
+.brand {
+  color: var(--ink);
+  font-weight: 900;
+  font-size: 21px;
+  letter-spacing: -1px;
+}
+.brand small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 3px;
+  margin-top: 5px;
+  opacity: .65;
+}
+.pill, .mission {
+  background: rgba(255,255,255,.73);
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: 0 12px 40px #44407315;
+  backdrop-filter: blur(18px);
+  color: var(--ink);
+}
+.pill {
+  border-radius: 30px;
+  padding: 12px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+.pill::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #30bb86;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+.mission {
+  position: absolute;
+  top: 108px;
+  left: 28px;
+  width: 270px;
+  padding: 20px;
+  border-radius: 22px;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 2.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.mission h2 { font-size: 21px; margin: 8px 0; letter-spacing: -.6px; }
+.mission p { font-size: 13px; line-height: 1.5; opacity: .7; margin: 0; }
+.progress { display: flex; gap: 6px; margin-top: 16px; }
+.progress span {
+  height: 6px;
+  background: #ddd9ee;
+  border-radius: 6px;
+  flex: 1;
+  transition: background .25s, box-shadow .25s;
+}
+.progress span.on { background: var(--violet); box-shadow: 0 0 12px #7656ff55; }
+#hint {
+  position: absolute;
+  bottom: 118px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #202044e8;
+  backdrop-filter: blur(12px);
+  padding: 13px 20px;
+  border-radius: 16px;
+  font-size: 13px;
+  text-align: center;
+  width: max-content;
+  max-width: 85vw;
+}
+.controls {
+  position: fixed;
+  bottom: max(26px, env(safe-area-inset-bottom));
+  left: 28px;
+  color: #292445;
+  font-size: 12px;
+}
+kbd {
+  font: inherit;
+  background: #ffffffb5;
+  border: 1px solid white;
+  padding: 6px 9px;
+  border-radius: 7px;
+}
+#hit {
+  position: fixed;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  right: 28px;
+  border: 1px solid #ffffff60;
+  border-radius: 22px;
+  padding: 18px 26px;
+  color: white;
+  background: var(--violet);
+  box-shadow: 0 10px 28px #7656ff45, inset 0 2px #ffffff30;
+  font-weight: 800;
+  transition: transform .15s, opacity .2s;
+}
+#hit:active { transform: scale(.94); }
+#hit:disabled { opacity: .45; cursor: default; }
+#pad {
+  position: fixed;
+  left: 20px;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: none;
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(2, 44px);
+  gap: 5px;
+}
+#pad button {
+  border: 1px solid white;
+  background: #ffffffbb;
+  backdrop-filter: blur(12px);
+  border-radius: 14px;
+  color: var(--ink);
+  font-size: 20px;
+  touch-action: none;
+  user-select: none;
+}
+#pad button:active { background: var(--mint); }
+#pad [data-key="ArrowUp"] { grid-column: 2; }
+#pad [data-key="ArrowLeft"] { grid-column: 1; grid-row: 2; }
+#pad [data-key="ArrowDown"] { grid-column: 2; grid-row: 2; }
+#pad [data-key="ArrowRight"] { grid-column: 3; grid-row: 2; }
 
-    /* HUD superior */
-    .top { position: fixed; top: 16px; left: 16px; right: 16px; display: flex;
-      justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
-    .top > * { pointer-events: auto; }
-
-    /* Barra de salud */
-    .salud { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px;
-      min-width: 230px; }
-    .salud .corazon { font-size: 20px; line-height: 1; filter: drop-shadow(0 0 6px rgba(255,90,110,.6)); }
-    .salud .cuerpo { flex: 1; }
-    .salud .fila { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1.5px;
-      color: var(--muted); margin-bottom: 5px; }
-    .salud .fila b { color: var(--text); font-weight: 700; letter-spacing: 0; }
-    .salud .barra { height: 12px; border-radius: 7px; background: rgba(0,0,0,.4);
-      border: 1px solid rgba(255,255,255,.1); overflow: hidden; }
-    .salud .relleno { height: 100%; width: 50%; border-radius: 7px;
-      background: linear-gradient(90deg, #7fdc4a, #c4ff83); box-shadow: 0 0 10px rgba(196,255,131,.5);
-      transition: width .3s ease, background .3s; }
-    .salud.media .relleno { background: linear-gradient(90deg, #e0b13a, #ffe07a); box-shadow: 0 0 10px rgba(255,224,122,.5); }
-    .salud.baja .relleno { background: linear-gradient(90deg, #d8394d, #ff7a8a); box-shadow: 0 0 10px rgba(255,90,110,.6); }
-
-    /* Columna derecha: Perfil + Mochila */
-    .derecha { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
-    .btn-perfil { display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-radius: 16px;
-      font-weight: 600; font-size: 13px; transition: transform .15s, border-color .15s; }
-    .btn-perfil:hover { border-color: var(--accent); transform: translateY(-1px); }
-    .btn-perfil .ico { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
-      background: var(--accent); color: #223017; font-weight: 900; transform: rotate(-7deg); }
-    .btn-mochila { width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center;
-      font-size: 24px; line-height: 1; padding: 0; transition: transform .15s, border-color .15s; }
-    .btn-mochila:hover { border-color: var(--accent); transform: translateY(-1px); }
-
-    /* Barra de acciones */
-    .acciones { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 6px; padding: 8px; border-radius: 20px; }
-    .acciones button { position: relative; min-width: 74px; padding: 10px 10px 8px; border-radius: 13px;
-      border: 1px solid transparent; background: rgba(255,255,255,.04); font-size: 11px;
-      display: flex; flex-direction: column; align-items: center; gap: 4px; transition: .15s; }
-    .acciones button:hover { background: rgba(255,255,255,.09); }
-    .acciones button.activo { border-color: #829e60; background: rgba(196,255,131,.13); color: var(--accent); }
-    .acciones .em { font-size: 19px; line-height: 1; }
-    .acciones kbd { position: absolute; top: 4px; right: 5px; font-size: 9px; color: var(--muted);
-      font-family: inherit; }
-
-    .ayuda { position: fixed; left: 16px; bottom: 18px; padding: 12px 14px; border-radius: 16px;
-      font-size: 11px; color: var(--muted); line-height: 1.9; }
-    .ayuda b { color: var(--text); font-weight: 600; }
-    .ayuda kbd { font-family: inherit; padding: 1px 6px; border-radius: 5px;
-      background: rgba(255,255,255,.1); color: var(--text); font-size: 10px; }
-
-    /* Joystick móvil */
-    #joy { position: fixed; left: 26px; bottom: 120px; width: 120px; height: 120px; border-radius: 50%;
-      display: none; touch-action: none; }
-    #joy .knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px;
-      border-radius: 50%; background: var(--accent); opacity: .85; box-shadow: 0 0 20px rgba(196,255,131,.5); }
-    #btnCorrer { position: fixed; right: 22px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
-      display: none; font-size: 11px; font-weight: 700; }
-    #btnCorrer.activo { background: var(--accent); color: #223017; }
-
-    #btnSaltar { position: fixed; right: 100px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
-      display: block; font-size: 11px; font-weight: 700; }
-    #btnSaltar.activo { background: var(--accent); color: #223017; }
-
-    #btnAtacar { position: fixed; right: 100px; bottom: 196px; width: 66px; height: 66px; border-radius: 50%;
-      display: block; font-size: 11px; font-weight: 700; }
-    #btnAtacar:active { background: var(--accent); color: #223017; }
-
-    /* Modal perfil */
-    .modal { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px;
-      background: rgba(8,10,16,.55); backdrop-filter: blur(6px); opacity: 0; pointer-events: none;
-      transition: opacity .2s; z-index: 10; }
-    .modal.abierto { opacity: 1; pointer-events: auto; }
-    .tarjeta { width: min(760px, 100%); max-height: 92vh; overflow-y: auto; border-radius: 26px;
-      padding: 26px; background: rgba(22,25,39,.94); transform: translateY(14px) scale(.98); transition: transform .25s; }
-    .modal.abierto .tarjeta { transform: none; }
-    .cab { display: flex; justify-content: space-between; align-items: start; gap: 14px; }
-    .eyebrow { color: var(--accent); font-size: 11px; letter-spacing: 2px; }
-    h2 { margin: 6px 0 4px; font-size: 28px; letter-spacing: -1px; }
-    .sub { color: var(--muted); font-size: 13px; margin: 0; }
-    .cerrar { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
-      background: rgba(255,255,255,.05); font-size: 18px; }
-    .campo { margin: 22px 0 18px; }
-    .campo label { display: block; font-size: 11px; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 8px; }
-    .campo input { width: 100%; padding: 13px 15px; border-radius: 13px; border: 1px solid var(--line);
-      background: #1b1f2e; outline: none; }
-    .campo input:focus { border-color: var(--accent); }
-    .skins { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
-    .skin { padding: 0; text-align: left; overflow: hidden; border-radius: 18px; border: 1px solid var(--line);
-      background: #1b1f2e; transition: transform .15s, border-color .15s; position: relative; }
-    .skin:hover { transform: translateY(-3px); }
-    .skin.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-    .skin img { width: 100%; aspect-ratio: 1.1; object-fit: contain; display: block;
-      background: radial-gradient(ellipse, #3a4160, #1d2131 72%); }
-    .skin .info { padding: 11px 13px 14px; }
-    .skin strong { display: block; font-size: 15px; }
-    .skin small { color: var(--accent); font-size: 11px; }
-    .skin p { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 6px 0 0; }
-    .skin .badge { position: absolute; top: 10px; left: 10px; font-size: 10px; font-weight: 700;
-      padding: 5px 9px; border-radius: 20px; background: var(--accent); color: #223017; display: none; }
-    .skin.sel .badge { display: block; }
-    .pie { display: flex; justify-content: flex-end; margin-top: 20px; }
-    .guardar { padding: 13px 22px; border-radius: 13px; border: 0; background: var(--accent);
-      color: #223017; font-weight: 700; }
-
-    #toast { position: fixed; top: 90px; left: 50%; transform: translate(-50%, -10px); padding: 11px 18px;
-      border-radius: 14px; font-size: 13px; opacity: 0; transition: .25s; pointer-events: none; z-index: 11; }
-    #toast.ver { opacity: 1; transform: translate(-50%, 0); }
-
-    #carga { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--bg);
-      transition: opacity .5s; }
-    #carga.fuera { opacity: 0; pointer-events: none; }
-    #carga .logo { width: 60px; height: 60px; margin: 0 auto 16px; border-radius: 17px; display: grid;
-      place-items: center; background: var(--accent); color: #233119; font-size: 34px; font-weight: 900;
-      animation: giro 1.6s ease-in-out infinite; }
-    #carga p { color: var(--muted); font-size: 13px; text-align: center; max-width: 320px; }
-    @keyframes giro { 50% { transform: rotate(-12deg) scale(1.08); } }
-
-    @media (max-width: 860px), (pointer: coarse) {
-      .ayuda { display: none; }
-      #joy, #btnCorrer { display: block; }
-      .acciones { left: auto; right: 10px; bottom: 10px; transform: none; max-width: calc(100% - 20px);
-        overflow-x: auto; }
-      .acciones button { min-width: 62px; }
-      .acciones kbd { display: none; }
-    }
-    @media (max-width: 600px) {
-      .skins { grid-template-columns: 1fr; }
-      .skin { display: grid; grid-template-columns: 110px 1fr; }
-      .skin img { height: 100%; aspect-ratio: auto; }
-      .btn-perfil span:last-child { display: none; }
-      .salud { min-width: 0; width: min(230px, 60vw); }
-    }
-        #btnAgarrar { position: fixed; right: 176px; bottom: 196px; width: 66px; height: 66px; border-radius: 50%;
-      display: block; font-size: 10px; font-weight: 700; transition: opacity .15s; }
-    #btnAgarrar.inactivo { opacity: .45; }
-    #btnAgarrar.cargando { background: rgba(196,255,131,.2); border-color: var(--accent); color: var(--accent); }
-    #btnLanzar { position: fixed; right: 176px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
-      display: block; font-size: 10px; font-weight: 700; }
-    #btnLanzar:active, #btnAgarrar:active { background: var(--accent); color: #223017; }
-    .oculto { display: none !important; }
-
-    #btnSaltar, #btnCorrer, #btnAtacar, #btnAgarrar, #btnLanzar {
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-  </style>
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #17132d65;
+  backdrop-filter: blur(14px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .5s, visibility .5s;
+  overflow-y: auto;
+}
+#overlay.open { opacity: 1; visibility: visible; }
+.card {
+  position: relative;
+  width: min(100%, 440px);
+  background: #fffdf8;
+  color: var(--ink);
+  border-radius: 32px;
+  padding: 38px 30px 26px;
+  text-align: center;
+  border: 1px solid white;
+  box-shadow: 0 35px 100px #17132d55;
+  transform: translateY(45px) rotateX(12deg) scale(.92);
+  transition: transform .65s cubic-bezier(.2,.8,.2,1);
+  overflow: hidden;
+}
+.open .card { transform: none; }
+.card::before {
+  content: '';
+  position: absolute;
+  height: 8px;
+  inset: 0 0 auto;
+  background: linear-gradient(90deg, #a18aff, #ffafd4, #ffe7a0, #a8f0d5);
+}
+.stamp {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 20px;
+  border-radius: 23px;
+  background: #ece5ff;
+  font-size: 34px;
+  transform: rotate(-8deg);
+}
+.card .eyebrow { color: #8871c1; }
+.card h1 {
+  font-size: clamp(38px, 8vw, 56px);
+  line-height: 1;
+  letter-spacing: -2px;
+  margin: 16px 0 12px;
+}
+.card .intro { font-size: 15px; color: #77718a; line-height: 1.5; }
+.details {
+  margin: 24px 0;
+  padding: 20px;
+  background: #f3effa;
+  border: 1px solid #e8e1f3;
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.details small {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #8b7ca1;
+  margin-bottom: 6px;
+}
+.details strong { font-size: 15px; }
+.place { grid-column: 1 / -1; }
+.cta {
+  display: block;
+  text-decoration: none;
+  border: none;
+  width: 100%;
+  border-radius: 16px;
+  padding: 17px;
+  background: var(--violet);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 8px 20px #7656ff30;
+}
+#replay {
+  border: none;
+  background: transparent;
+  color: #90859f;
+  margin-top: 17px;
+  font-size: 12px;
+  padding: 7px;
+}
+#loader {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  background: #f1edff;
+  color: var(--ink);
+  z-index: 20;
+}
+#loader b { font-size: 24px; }
+#loader p { font-size: 14px; color: #82739f; max-width: 300px; line-height: 1.5; }
+@media (pointer: coarse) {
+  #pad { display: grid; }
+  .controls { display: none; }
+}
+@media (max-width: 600px) {
+  .hud { padding: 20px; }
+  .brand { font-size: 18px; }
+  .pill { font-size: 10px; padding: 10px 12px; }
+  .mission { left: 20px; top: 87px; width: 220px; padding: 15px; }
+  .mission h2 { font-size: 18px; }
+  .mission p { font-size: 12px; }
+  #hit { right: 20px; padding: 18px 20px; }
+  #hint { bottom: 135px; font-size: 12px; }
+  .card { padding: 28px 24px 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before { transition: none !important; }
+}
+</style>
 </head>
 <body>
-  <div id="carga"><div><div class="logo">C</div><p id="cargaTxt">Construyendo el mundo...</p></div></div>
-  <div id="mundo"></div>
+<div id="world"></div>
 
+<div class="hud">
   <div class="top">
-    <div class="salud glass" id="salud" role="meter" aria-label="Salud" aria-valuemin="0">
-      <span class="corazon">❤️</span>
-      <div class="cuerpo">
-        <div class="fila"><span>SALUD</span><b id="saludTxt">50 / 100</b></div>
-        <div class="barra"><div class="relleno" id="saludRelleno"></div></div>
-      </div>
-    </div>
-    <div class="derecha">
-      <button class="btn-perfil glass" id="abrirPerfil" type="button">
-        <span class="ico">C</span><span>Perfil</span>
-      </button>
-      <button class="btn-mochila glass" id="abrirMochila" type="button" aria-label="Mochila" title="Mochila">🎒</button>
-    </div>
+    <div class="brand">PARTY QUEST<small>UNA MISIÓN ESPECIAL</small></div>
+    <div class="pill">MUNDO DE CUMPLEAÑOS</div>
   </div>
-
-  <div class="ayuda glass">
-    <b>Moverse</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <b>Correr</b> <kbd>Shift</kbd> · <b>Saltar</b> <kbd>Space</kbd><br>
-    <b>Agarrar/Soltar</b> <kbd>E</kbd> · <b>Lanzar</b> <kbd>R</kbd><br>
-    <b>Cámara</b> arrastrar · rueda para zoom · <b>Perfil</b> <kbd>P</kbd> · <b>Mochila</b> <kbd>B</kbd>
-  </div>
-
-  <nav class="acciones glass" id="acciones" aria-label="Animaciones"></nav>
-
-  <div id="joy" class="glass"><div class="knob"></div></div>
-  <button id="btnCorrer" class="glass" type="button">CORRER</button>
-  <button id="btnSaltar" class="glass" type="button" aria-label="Saltar">SALTAR</button>
-  <button id="btnAtacar" class="glass" type="button" aria-label="Atacar">ATACAR</button>
-  <button id="btnAgarrar" class="glass inactivo" type="button" aria-label="Agarrar">AGARRAR</button>
-  <button id="btnLanzar" class="glass oculto" type="button" aria-label="Lanzar">LANZAR</button>
-
-  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="tituloPerfil">
-    <div class="tarjeta">
-      <div class="cab">
-        <div>
-          <span class="eyebrow">PERFIL DEL JUGADOR</span>
-          <h2 id="tituloPerfil">Elige tu skin</h2>
-          <p class="sub">Cambia de personaje cuando quieras. Conservas tu posición en el mapa.</p>
-        </div>
-        <button class="cerrar" id="cerrarPerfil" type="button" aria-label="Cerrar">✕</button>
-      </div>
-      <div class="campo">
-        <label for="nombreJugador">NOMBRE DE JUGADOR</label>
-        <input id="nombreJugador" maxlength="18" placeholder="Escribe tu nombre">
-      </div>
-      <div class="skins" id="skins"></div>
-      <div class="pie"><button class="guardar" id="guardar" type="button">Listo, a jugar</button></div>
+  <section class="mission">
+    <div class="eyebrow">Tu misión</div>
+    <h2 id="missionTitle">Encuentra la sorpresa</h2>
+    <p id="missionText">Sigue el camino y descubre qué esconde el gran regalo.</p>
+    <div class="progress" aria-label="Golpes al regalo">
+      <span></span><span></span><span></span>
     </div>
-  </div>
+  </section>
+  <div id="hint" role="status" aria-live="polite">¡Tu aventura empieza aquí!</div>
+</div>
 
-  <div id="toast" class="glass"></div>
+<div class="controls"><kbd>W A S D</kbd> o flechas para moverte · <kbd>Espacio</kbd> golpear</div>
+<div id="pad" aria-label="Movimiento">
+  <button data-key="ArrowUp" aria-label="Avanzar">↑</button>
+  <button data-key="ArrowLeft" aria-label="Izquierda">←</button>
+  <button data-key="ArrowDown" aria-label="Retroceder">↓</button>
+  <button data-key="ArrowRight" aria-label="Derecha">→</button>
+</div>
+<button id="hit" disabled>GOLPEAR ✦</button>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="./sheet_personajes.js"></script>
-  <script src="./config_player.js"></script>
-  <script src="./audio_juego.js"></script>
-  <script>
-  (function () {
-    "use strict";
-    const $ = id => document.getElementById(id);
+<div id="overlay" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
+  <article class="card">
+    <div class="stamp">🎂</div>
+    <div class="eyebrow">Sorpresa desbloqueada</div>
+    <h1 id="inviteTitle"></h1>
+    <p class="intro" id="inviteIntro"></p>
+    <div class="details">
+      <div><small>CUÁNDO</small><strong id="date"></strong></div>
+      <div><small>HORA</small><strong id="time"></strong></div>
+      <div class="place"><small>DÓNDE</small><strong id="place"></strong></div>
+    </div>
+    <a class="cta" id="rsvp" target="_blank" rel="noopener noreferrer">Confirmar asistencia ↗</a>
+    <button id="replay">Volver a explorar</button>
+  </article>
+</div>
 
-    if (!window.THREE || !window.Catalogo3D) {
-      $("cargaTxt").textContent = "No se pudieron cargar los recursos. Revisa tu conexión y que sheet_personajes.js esté junto a este archivo.";
-      return;
+<div id="loader"><b>Construyendo la aventura...</b><p>Preparando una sorpresa para ti.</p></div>
+
+<script type="module">
+// PERSONALIZA ESTOS DATOS.
+// El teléfono debe incluir código de país, sin "+" ni espacios.
+// Si lo dejas vacío, el botón permite descargar la invitación.
+const EVENTO = {
+  nombre: "Alex",
+  edad: 10,
+  fecha: "24 de octubre",
+  hora: "17:00 h",
+  lugar: "Salón Arcoíris",
+  direccion: "Calle de la Alegría 123",
+  telefono: ""
+};
+
+const $ = id => document.getElementById(id);
+$("inviteTitle").textContent = `¡${EVENTO.nombre} cumple ${EVENTO.edad}!`;
+$("inviteIntro").textContent = "Superaste la misión. Ahora viene lo mejor: ¡celebrar juntos!";
+$("date").textContent = EVENTO.fecha;
+$("time").textContent = EVENTO.hora;
+$("place").textContent = `${EVENTO.lugar} · ${EVENTO.direccion}`;
+
+if (EVENTO.telefono) {
+  const mensaje = `¡Hola! Confirmo mi asistencia al cumpleaños de ${EVENTO.nombre}.`;
+  $("rsvp").href = `https://wa.me/${EVENTO.telefono.replace(/\D/g) ""}?text=${encodeURIComponent(mensaje)}`;
+} else {
+  const texto = `¡${EVENTO.nombre} cumple ${EVENTO.edad}!\n${EVENTO.fecha} · ${EVENTO.hora}\n${EVENTO.lugar}\n${EVENTO.direccion}`;
+  $("rsvp").href = URL.createObjectURL(new Blob([texto], { type: "text/plain;charset=utf-8" }));
+  $("rsvp").download = "invitacion.txt";
+  $("rsvp").removeAttribute("target");
+  $("rsvp").textContent = "Guardar invitación ↓";
+}
+
+try {
+  const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+  iniciar(THREE);
+} catch (error) {
+  $("loader").innerHTML = "<b>No pudimos abrir el mundo</b><p>Comprueba tu conexión y recarga la página. Este juego necesita un navegador compatible con WebGL.</p>";
+  console.error(error);
+}
+
+function iniciar(T) {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const scene = new T.Scene();
+  scene.background = new T.Color("#c9c8ed");
+  scene.fog = new T.Fog("#c9c8ed", 24, 55);
+
+  const camera = new T.PerspectiveCamera(43, innerWidth / innerHeight, .1, 100);
+  const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.outputColorSpace = T.SRGBColorSpace;
+  renderer.toneMapping = T.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  $("world").appendChild(renderer.domElement);
+
+  scene.add(new T.HemisphereLight("#fff4ef", "#74659b", 2.5));
+  const sun = new T.DirectionalLight("#fff1dd", 3.4);
+  sun.position.set(-8, 16, 8);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, far: 45 });
+  sun.shadow.normalBias = .04;
+  scene.add(sun);
+
+  const materials = new Map();
+  function mat(color) {
+    if (!materials.has(color)) materials.set(color, new T.MeshStandardMaterial({ color, roughness: .72 }));
+    return materials.get(color);
+  }
+  const boxGeo = new T.BoxGeometry(1, 1, 1);
+  function box(parent, size, pos, color) {
+    const m = new T.Mesh(boxGeo, mat(color));
+    m.scale.set(...size);
+    m.position.set(...pos);
+    m.castShadow = m.receiveShadow = true;
+    parent.add(m);
+    return m;
+  }
+  function ball(parent, radius, pos, color) {
+    const m = new T.Mesh(new T.IcosahedronGeometry(radius, 1), mat(color));
+    m.position.set(...pos);
+    m.castShadow = true;
+    parent.add(m);
+    return m;
+  }
+
+  // Isla flotante.
+  box(scene, [18, 1, 16], [0, -.55, 0], "#a99bd3");
+  box(scene, [18.2, .32, 16.2], [0, .02, 0], "#a3d9b3");
+  box(scene, [15, 1.1, 13], [0, -1.5, 0], "#9385bd");
+  box(scene, [10, 1.2, 9], [0, -2.5, 0], "#8273ae");
+
+  // Camino y plataforma.
+  for (let i = 0; i < 8; i++) {
+    const tile = box(scene, [2.3, .13, .85], [Math.sin(i * .55) * .4, .23, 5.8 - i * 1.2], "#fff1da");
+    tile.rotation.y = Math.sin(i) * .09;
+  }
+  const pedestal = new T.Mesh(new T.CylinderGeometry(2.55, 2.7, .32, 48), mat("#eee4ff"));
+  pedestal.position.set(0, .31, -4);
+  pedestal.receiveShadow = true;
+  scene.add(pedestal);
+
+  const obstacles = [];
+  function tree(x, z, scale = 1) {
+    const g = new T.Group();
+    g.position.set(x, .18, z);
+    g.scale.setScalar(scale);
+    scene.add(g);
+    box(g, [.38, 1.7, .38], [0, .85, 0], "#b08d8e");
+    box(g, [1.8, 1.3, 1.7], [0, 2, 0], "#72bba0");
+    box(g, [1.3, .85, 1.25], [.12, 2.9, 0], "#a2dfb3");
+    obstacles.push({ x, z, r: .7 * scale });
+  }
+  [[-6,-5,1.2],[6,-5,1],[-6,1,1],[6,2,1.25],[-5,5,.8],[7,6,.75]].forEach(v => tree(...v));
+
+  for (let i = 0; i < 32; i++) {
+    const x = Math.sin(i * 9.2) * 7.6;
+    const z = Math.cos(i * 4.8) * 6.7;
+    if (Math.abs(x) < 2.8) continue;
+    box(scene, [.08,.3,.08], [x,.32,z], "#6da98e");
+    box(scene, [.26,.16,.26], [x,.52,z], i % 2 ? "#ffe0a3" : "#d4b9ff");
+  }
+
+  // Globos y nubes.
+  const balloons = [];
+  for (const [x,z,color] of [[-3,-4,"#b39aff"],[3,-4,"#ffc0d6"],[-3.5,-5.5,"#ffe0a3"],[3.5,-5.5,"#baffdf"]]) {
+    const g = new T.Group();
+    g.position.set(x, .2, z);
+    box(g, [.025,2.8,.025], [0,1.4,0], "#f6efff");
+    const b = ball(g, .52, [0,3,0], color);
+    b.scale.y = 1.22;
+    scene.add(g);
+    balloons.push(g);
+  }
+  for (let i = 0; i < 9; i++) {
+    const g = new T.Group();
+    g.position.set(Math.sin(i * 2.3) * 23, -3 + i % 3, Math.cos(i * 2.3) * 23);
+    box(g, [4, .8, 2], [0,0,0], "#eeeafa");
+    box(g, [2,1.3,1.8], [.5,.4,0], "#eeeafa");
+    scene.add(g);
+  }
+
+  // Regalo gigante.
+  const gift = new T.Group();
+  gift.position.set(0, .48, -4);
+  scene.add(gift);
+  box(gift, [2.05,2,2.05], [0,1,0], "#9470ee");
+  box(gift, [.32,2.05,2.08], [0,1,0], "#ffe0a2");
+  box(gift, [2.08,2.05,.32], [0,1,0], "#ffe0a2");
+  box(gift, [2.22,.3,2.22], [0,2.12,0], "#b193ff");
+  box(gift, [.35,.32,2.25], [0,2.13,0], "#ffe0a2");
+  box(gift, [2.25,.32,.35], [0,2.13,0], "#ffe0a2");
+  const bowL = box(gift, [.85,.3,.55], [-.43,2.48,0], "#ffdb94");
+  const bowR = box(gift, [.85,.3,.55], [.43,2.48,0], "#ffdb94");
+  bowL.rotation.z = -.4;
+  bowR.rotation.z = .4;
+  ball(gift, .22, [0,2.48,0], "#ffedbc");
+
+  const marker = new T.Mesh(new T.OctahedronGeometry(.24), mat("#fff2ba"));
+  marker.position.set(0, 4, -4);
+  scene.add(marker);
+
+  // Personaje de bloques con brazos articulados.
+  const player = new T.Group();
+  player.position.set(0,.2,5.5);
+  player.rotation.y = Math.PI;
+  scene.add(player);
+  box(player, [.7,.78,.42], [0,1.05,0], "#7761d9");
+  box(player, [.47,.14,.44], [0,1.43,0], "#fff2d8");
+  box(player, [.6,.6,.57], [0,1.82,0], "#f4c89f");
+  box(player, [.65,.18,.61], [0,2.13,0], "#493649");
+  box(player, [.17,.24,.6], [-.25,2.01,0], "#493649");
+  for (const x of [-.14,.14]) box(player, [.065,.085,.025], [x,1.84,.294], "#3c3042");
+  box(player, [.14,.035,.025], [0,1.68,.295], "#ad6e6e");
+
+  function limb(x, y, color, length) {
+    const pivot = new T.Group();
+    pivot.position.set(x,y,0);
+    player.add(pivot);
+    box(pivot, [.25,length,.3], [0,-length / 2,0], color);
+    return pivot;
+  }
+  const leftArm = limb(-.49,1.37,"#f4c89f",.7);
+  const rightArm = limb(.49,1.37,"#f4c89f",.7);
+  const leftLeg = limb(-.2,.68,"#414571",.6);
+  const rightLeg = limb(.2,.68,"#414571",.6);
+  box(leftLeg, [.3,.17,.44], [0,-.55,.07], "#fff3e6");
+  box(rightLeg, [.3,.17,.44], [0,-.55,.07], "#fff3e6");
+
+  const keys = {};
+  const particles = [];
+  const colors = ["#b496ff","#ffe0a2","#ff9fc9","#b1ffda","#ffffff"];
+  let hits = 0, opened = false, modal = false;
+  let lastHit = -10, punch = 0, shake = 0, elapsed = 0;
+  let revealAt = Infinity;
+
+  function burst(count, power) {
+    for (let i = 0; i < count; i++) {
+      const mesh = new T.Mesh(boxGeo, mat(colors[i % colors.length]));
+      const size = .07 + Math.random() * .16;
+      mesh.scale.set(size, size * .6, size);
+      mesh.position.set(
+        (Math.random() - .5) * 1.6,
+        1.5 + Math.random() * 1.5,
+        -4 + (Math.random() - .5) * 1.6
+      );
+      scene.add(mesh);
+      particles.push({
+        mesh,
+        v: new T.Vector3((Math.random()-.5)*power, 2+Math.random()*power, (Math.random()-.5)*power),
+        life: 2 + Math.random() * 1.7
+      });
     }
+  }
+  function showInvitation() {
+    modal = true;
+    Object.keys(keys).forEach(k => keys[k] = false);
+    $("overlay").classList.add("open");
+    $("rsvp").focus();
+  }
+  function closeInvitation() {
+    modal = false;
+    $("overlay").classList.remove("open");
+    $("hit").focus();
+  }
+  $("replay").onclick = closeInvitation;
 
-    const T = window.THREE;
-    const { PERSONAJES, crearPersonaje } = window.Catalogo3D;
-
-    // ---------- Configuración del jugador ----------
-    const CFG = window.ConfigPlayer;
-    if (!CFG) {
-      $("cargaTxt").textContent = "Falta config_player.js junto a este archivo.";
-      return;
+  function strike() {
+    if (modal) return;
+    if (opened) { showInvitation(); return; }
+    if (player.position.distanceTo(new T.Vector3(0,.2,-4)) > 2.9) return;
+    if (elapsed - lastHit < .6) return;
+    lastHit = elapsed;
+    hits++;
+    punch = .3;
+    shake = .35;
+    player.rotation.y = Math.atan2(-player.position.x, -4-player.position.z);
+    document.querySelectorAll(".progress span").forEach((s,i) => s.classList.toggle("on", i < hits));
+    burst(reduced ? 8 : 28, 3);
+    $("missionTitle").textContent = `${hits} de 3 golpes`;
+    $("missionText").textContent = hits === 1 ? "¡Bien! La sorpresa está cada vez más cerca." : "Un golpe más y empieza la celebración.";
+    if (hits === 3) {
+      opened = true;
+      gift.visible = marker.visible = false;
+      burst(reduced ? 30 : 170, 8);
+      $("missionTitle").textContent = "¡Misión completada!";
+      $("missionText").textContent = "Encontraste una invitación muy especial.";
+      $("hit").textContent = "VER INVITACIÓN ↗";
+      revealAt = elapsed + (reduced ? .2 : 1.1);
     }
-    const ACCIONES = CFG.acciones;
+  }
+  $("hit").onclick = strike;
 
-    // ---------- Skins jugables ----------
-    const SKINS = ["kitsune", "panda", "merlin", "aura", "alex",
-                   "nova", "salvia", "akira", "yuki", "atlas",
-                   "ember", "onyx", "chicle", "menta", "leo",
-                   "vera", "nico", "alma", "bruno", "roldan",
-                   "sigrid", "kael", "duna", "ferrum", "boreal", "brasa"]
-      .map(id => PERSONAJES.find(p => p.id === id)).filter(Boolean);
-
-    // ---------- Renderer y escena ----------
-    let renderer;
-    try {
-      renderer = new T.WebGLRenderer({ antialias: true });
-    } catch (e) {
-      $("cargaTxt").textContent = "Tu navegador no pudo iniciar WebGL.";
-      return;
-    }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = T.PCFSoftShadowMap;
-    renderer.outputColorSpace = T.SRGBColorSpace;
-    renderer.toneMapping = T.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
-    $("mundo").appendChild(renderer.domElement);
-
-    const escena = new T.Scene();
-    const CIELO = new T.Color("#9fd2f5");
-    escena.background = CIELO;
-    escena.fog = new T.Fog(CIELO, 40, 110);
-
-    const camara = new T.PerspectiveCamera(50, 1, 0.1, 200);
-
-    escena.add(new T.HemisphereLight("#e8f4ff", "#4c6b3a", 1.9));
-    const sol = new T.DirectionalLight("#fff1d6", 3.2);
-    sol.castShadow = true;
-    sol.shadow.mapSize.set(2048, 2048);
-    Object.assign(sol.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 60 });
-    sol.shadow.normalBias = 0.04;
-    escena.add(sol, sol.target);
-
-    // ---------- Mapa ----------
-    const LIMITE = 46;
-    const obstaculos = [];
-    let semilla = 12345;
-    const rnd = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
-    const mats = {};
-    const mat = (c, extra = {}) => mats[c] || (mats[c] = new T.MeshStandardMaterial({ color: c, roughness: .85, ...extra }));
-
-    function malla(geo, color, x, y, z, sombra = true) {
-      const m = new T.Mesh(geo, mat(color));
-      m.position.set(x, y, z);
-      m.castShadow = sombra;
-      m.receiveShadow = true;
-      escena.add(m);
-      return m;
-    }
-
-    // Suelo
-    const suelo = new T.Mesh(new T.PlaneGeometry(240, 240), mat("#79b85e"));
-    suelo.rotation.x = -Math.PI / 2;
-    suelo.receiveShadow = true;
-    escena.add(suelo);
-
-    // Plaza central y caminos
-    malla(new T.CylinderGeometry(6, 6.2, 0.12, 48), "#c9c2b0", 0, 0.06, 0, false);
-    malla(new T.CylinderGeometry(4.6, 4.6, 0.14, 48), "#ddd6c3", 0, 0.07, 0, false);
-    const aro = new T.Mesh(new T.TorusGeometry(5.3, 0.05, 8, 96),
-      new T.MeshStandardMaterial({ color: "#c4ff83", emissive: "#c4ff83", emissiveIntensity: .5 }));
-    aro.rotation.x = Math.PI / 2; aro.position.y = 0.15;
-    escena.add(aro);
-    for (const [w, d, x, z] of [[2.6, 40, 0, 26], [2.6, 40, 0, -26], [40, 2.6, 26, 0], [40, 2.6, -26, 0]]) {
-      malla(new T.BoxGeometry(w, 0.08, d), "#cdbf9d", x, 0.04, z, false);
-    }
-
-    // Cristal flotante
-    const cristal = malla(new T.OctahedronGeometry(0.6), "#c4ff83", 0, 3.2, 0);
-    cristal.material = new T.MeshStandardMaterial({ color: "#c4ff83", emissive: "#9be05a", emissiveIntensity: .6, roughness: .3 });
-    malla(new T.CylinderGeometry(0.7, 0.9, 0.9, 6), "#9aa1b5", 0, 0.55, 0);
-    obstaculos.push({ x: 0, z: 0, r: 0.9 });
-
-    // Estanque
-    const agua = new T.Mesh(new T.CircleGeometry(5.5, 48),
-      new T.MeshStandardMaterial({ color: "#4fb3d9", roughness: .15, metalness: .2, transparent: true, opacity: .9 }));
-    agua.rotation.x = -Math.PI / 2; agua.position.set(16, 0.05, -15);
-    escena.add(agua);
-    malla(new T.TorusGeometry(5.6, 0.35, 6, 40), "#a5a99e", 16, 0.05, -15).rotation.x = Math.PI / 2;
-    obstaculos.push({ x: 16, z: -15, r: 5.8 });
-
-    // ---------- Cajas ----------
-    const CAJ = CFG.cajas;
-    const cajas = [];
-    const R_JUG = 0.45; // radio del jugador frente a cajas
-
-    function crearMallaCaja(tipo) {
-      const s = tipo.tam, g = new T.Group();
-      g.add(new T.Mesh(new T.BoxGeometry(s, s, s), mat(tipo.color)));
-      const b = s * 0.12, L = s + 0.03, h = s / 2;
-      const esq = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
-      const listones = [
-        ...esq.map(([a, c]) => [b, L, b, a * h, 0, c * h]),   // verticales
-        ...esq.map(([a, c]) => [L, b, b, 0, a * h, c * h]),   // horizontales X
-        ...esq.map(([a, c]) => [b, b, L, a * h, c * h, 0]),   // horizontales Z
-      ];
-      for (const [w, hh, d, x, y, z] of listones) {
-        const m = new T.Mesh(new T.BoxGeometry(w, hh, d), mat(tipo.marco));
-        m.position.set(x, y, z); g.add(m);
-      }
-      for (const lado of [-1, 1]) {           // listón diagonal delante y detrás
-        const d = new T.Mesh(new T.BoxGeometry(s * 1.2, b * 0.8, b * 0.5), mat(tipo.marco));
-        d.position.z = lado * (h + 0.005); d.rotation.z = Math.PI / 4; g.add(d);
-      }
-      g.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
-      return g;
-    }
-
-    function sincronizarCaja(c) {
-      c.malla.position.set(c.pos.x, c.pos.y + c.tam / 2, c.pos.z);
-    }
-
-    for (const [nombre, x, z] of CAJ.ubicaciones) {
-      const tipo = CAJ.tipos[nombre];
-      const malla = crearMallaCaja(tipo);
-      escena.add(malla);
-      const c = { nombre, tipo, tam: tipo.tam, pos: new T.Vector3(x, 0, z),
-                  vel: new T.Vector3(), estado: "suelo", malla };
-      sincronizarCaja(c);
-      cajas.push(c);
-    }
-
-    function dentroDeCaja(x, z, margen = 0) {
-      return cajas.some(c => Math.abs(x - c.pos.x) < c.tam / 2 + margen &&
-                             Math.abs(z - c.pos.z) < c.tam / 2 + margen);
-    }
-
-    // Altura de la superficie más alta bajo (x,z): suelo = 0 o techo de una caja
-    function alturaApoyo(x, z, mitad, ignorar) {
-      let h = 0;
-      for (const c of cajas) {
-        if (c === ignorar || c.estado !== "suelo") continue;
-        if (Math.abs(x - c.pos.x) < c.tam / 2 + mitad &&
-            Math.abs(z - c.pos.z) < c.tam / 2 + mitad) h = Math.max(h, c.pos.y + c.tam);
-      }
-      return h;
-    }
-
-    // Empuja un punto fuera de árboles/rocas/muro
-    function fueraDeObstaculos(p, radio) {
-      for (const o of obstaculos) {
-        const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), min = o.r + radio;
-        if (d < min && d > 0.0001) { p.x = o.x + dx / d * min; p.z = o.z + dz / d * min; }
-      }
-      p.x = T.MathUtils.clamp(p.x, -LIMITE + radio, LIMITE - radio);
-      p.z = T.MathUtils.clamp(p.z, -LIMITE + radio, LIMITE - radio);
-    }
-
-    // ¿La caja en vuelo choca de costado con algo?
-    function chocaLateral(c) {
-      const h = c.tam / 2;
-      if (Math.abs(c.pos.x) > LIMITE - h || Math.abs(c.pos.z) > LIMITE - h) return true;
-      for (const o of obstaculos) {
-        if (Math.hypot(c.pos.x - o.x, c.pos.z - o.z) < o.r + h * 0.9 && c.pos.y < 3) return true;
-      }
-      for (const o of cajas) {
-        if (o === c || o.estado !== "suelo") continue;
-        const solapa = Math.abs(c.pos.x - o.pos.x) < (o.tam + c.tam) / 2 * 0.95 &&
-                       Math.abs(c.pos.z - o.pos.z) < (o.tam + c.tam) / 2 * 0.95;
-        if (solapa && c.pos.y < o.pos.y + o.tam - 0.25 && c.pos.y + c.tam > o.pos.y) return true;
-      }
-      return false;
-    }
-
-    // Colisión horizontal jugador ↔ cajas (AABB vs círculo)
-    function colisionCajas(p) {
-      for (const c of cajas) {
-        if (c.estado === "cargada") continue;
-        if (p.y >= c.pos.y + c.tam - 0.05 || p.y + 1.9 < c.pos.y) continue; // está encima o debajo
-        const h = c.tam / 2;
-        const cx = T.MathUtils.clamp(p.x, c.pos.x - h, c.pos.x + h);
-        const cz = T.MathUtils.clamp(p.z, c.pos.z - h, c.pos.z + h);
-        const dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz);
-        if (d >= R_JUG) continue;
-        if (d > 1e-4) { p.x = cx + dx / d * R_JUG; p.z = cz + dz / d * R_JUG; }
-        else {
-          const ox = h - Math.abs(p.x - c.pos.x), oz = h - Math.abs(p.z - c.pos.z);
-          if (ox < oz) p.x = c.pos.x + Math.sign(p.x - c.pos.x || 1) * (h + R_JUG);
-          else         p.z = c.pos.z + Math.sign(p.z - c.pos.z || 1) * (h + R_JUG);
-        }
-      }
-    }
-
-
-    // Árboles
-    const gTronco = new T.BoxGeometry(0.5, 1.6, 0.5);
-    const gHoja1 = new T.BoxGeometry(2.2, 1.3, 2.2);
-    const gHoja2 = new T.BoxGeometry(1.5, 1, 1.5);
-    const verdes = ["#3f8f4a", "#4ea055", "#5aa84b", "#3a7f52"];
-    function arbol(x, z, s) {
-      const g = new T.Group();
-      const t = new T.Mesh(gTronco, mat("#7a5236")); t.position.y = 0.8;
-      const c = verdes[Math.floor(rnd() * verdes.length)];
-      const h1 = new T.Mesh(gHoja1, mat(c)); h1.position.y = 2.1;
-      const h2 = new T.Mesh(gHoja2, mat(c)); h2.position.y = 3.1;
-      for (const m of [t, h1, h2]) { m.castShadow = m.receiveShadow = true; g.add(m); }
-      g.position.set(x, 0, z); g.scale.setScalar(s); g.rotation.y = rnd() * Math.PI;
-      escena.add(g);
-      obstaculos.push({ x, z, r: 0.45 * s });
-    }
-    function libre(x, z, margen) {
-      if (Math.hypot(x, z) < 8) return false;
-      if (Math.abs(x) < 2.5 || Math.abs(z) < 2.5) return false;
-      return !dentroDeCaja(x, z, margen + 0.5) &&
-             obstaculos.every(o => Math.hypot(x - o.x, z - o.z) > o.r + margen);
-
-    }
-    for (let i = 0, n = 0; i < 400 && n < 40; i++) {
-      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
-      if (libre(x, z, 2)) { arbol(x, z, 0.8 + rnd() * 0.6); n++; }
-    }
-
-    // Rocas
-    const gRoca = new T.DodecahedronGeometry(1, 0);
-    for (let i = 0, n = 0; i < 200 && n < 22; i++) {
-      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
-      if (!libre(x, z, 1.5)) continue;
-      const s = 0.4 + rnd() * 0.7;
-      const r = malla(gRoca, rnd() > .5 ? "#9097a6" : "#7d8494", x, s * 0.5, z);
-      r.material.flatShading = true;
-      r.scale.set(s, s * 0.75, s);
-      r.rotation.set(rnd(), rnd() * 3, rnd());
-      obstaculos.push({ x, z, r: s * 0.9 });
-      n++;
-    }
-
-    // Flores
-    const gFlor = new T.BoxGeometry(0.18, 0.18, 0.18);
-    const gTallo = new T.BoxGeometry(0.05, 0.3, 0.05);
-    const coloresFlor = ["#ff8fb1", "#ffd86b", "#ffffff", "#b49bff", "#ff9a5a"];
-    for (let i = 0; i < 260; i++) {
-      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
-      if (Math.hypot(x, z) < 7 || Math.abs(x) < 1.6 || Math.abs(z) < 1.6) continue;
-      if (dentroDeCaja(x, z, 0.3)) continue;
-
-      malla(gTallo, "#4b8c3c", x, 0.15, z, false);
-      malla(gFlor, coloresFlor[i % coloresFlor.length], x, 0.34, z, false);
-    }
-
-    // Muro perimetral
-    (function construirMuro() {
-      const ALTO = 8;
-      const GROSOR = 1.2;
-      const LADO = LIMITE * 2 + GROSOR;
-      const colorMuro = "#8a8478";
-      const colorRemate = "#6f6a60";
-
-      const paredes = [
-        { w: LADO, h: ALTO, d: GROSOR, x: 0, z: -LIMITE - GROSOR / 2 },
-        { w: LADO, h: ALTO, d: GROSOR, x: 0, z:  LIMITE + GROSOR / 2 },
-        { w: GROSOR, h: ALTO, d: LADO, x: -LIMITE - GROSOR / 2, z: 0 },
-        { w: GROSOR, h: ALTO, d: LADO, x:  LIMITE + GROSOR / 2, z: 0 },
-      ];
-
-      for (const p of paredes) {
-        const m = malla(new T.BoxGeometry(p.w, p.h, p.d), colorMuro, p.x, p.h / 2, p.z);
-        m.receiveShadow = true;
-        const remate = malla(new T.BoxGeometry(p.w + 0.15, 0.5, p.d + 0.15), colorRemate, p.x, p.h + 0.25, p.z);
-        remate.castShadow = true;
-
-        const largo = Math.max(p.w, p.d);
-        const pasos = Math.ceil(largo / 1.5);
-        const esHorizontal = p.w > p.d;
-        for (let i = 0; i <= pasos; i++) {
-          const t = i / pasos - 0.5;
-          obstaculos.push({
-            x: esHorizontal ? p.x + t * p.w : p.x,
-            z: esHorizontal ? p.z : p.z + t * p.d,
-            r: GROSOR * 0.6,
-          });
-        }
-      }
-    })();
-
-    // Nubes
-    const nubes = [];
-    const gNube = new T.BoxGeometry(1, 1, 1);
-    const matNube = new T.MeshStandardMaterial({ color: "#ffffff", roughness: 1 });
-    for (let i = 0; i < 14; i++) {
-      const g = new T.Group();
-      for (let j = 0; j < 4; j++) {
-        const b = new T.Mesh(gNube, matNube);
-        b.scale.set(3 + rnd() * 3, 1.2 + rnd(), 2 + rnd() * 2);
-        b.position.set(j * 2 - 3, rnd() * 0.8, rnd() * 1.5);
-        g.add(b);
-      }
-      g.position.set((rnd() * 2 - 1) * 70, 22 + rnd() * 8, (rnd() * 2 - 1) * 70);
-      escena.add(g);
-      nubes.push(g);
-    }
-
-    // ---------- Personaje del jugador ----------
-    const SALUD = CFG.salud || { max: 100, inicial: 50, umbralMedio: 0.5, umbralBajo: 0.25 };
-    const jugador = {
-      pos: new T.Vector3(0, 0, 8),
-      rot: Math.PI,
-      vy: 0,
-      enAire: false,
-      aterrizando: 0,
-      fuerzaAterrizaje: 0,
-      salud: SALUD.inicial,
-      saludMax: SALUD.max,
-      modelo: null,
-      ficha: null,
-      carga: null,
-
-    };
-
-    // ---------- Barra de salud ----------
-    function actualizarSalud() {
-      const r = jugador.salud / jugador.saludMax;
-      const el = $("salud");
-      $("saludRelleno").style.width = (r * 100) + "%";
-      $("saludTxt").textContent = `${Math.round(jugador.salud)} / ${jugador.saludMax}`;
-      el.classList.toggle("media", r < SALUD.umbralMedio && r >= SALUD.umbralBajo);
-      el.classList.toggle("baja", r < SALUD.umbralBajo);
-      el.setAttribute("aria-valuemax", jugador.saludMax);
-      el.setAttribute("aria-valuenow", Math.round(jugador.salud));
-    }
-    function setSalud(v) {
-      jugador.salud = T.MathUtils.clamp(v, 0, jugador.saludMax);
-      actualizarSalud();
-    }
-    // API para otros scripts / consola
-    window.Jugador = {
-      get salud() { return jugador.salud; },
-      setSalud,
-      danar: n => setSalud(jugador.salud - n),
-      curar: n => setSalud(jugador.salud + n),
-    };
-    actualizarSalud();
-
-    function equipar(id, avisar) {
-      const ficha = SKINS.find(s => s.id === id) || SKINS[0];
-      if (jugador.modelo) {
-        escena.remove(jugador.modelo.raiz);
-        jugador.modelo.destruir();
-      }
-      jugador.ficha = ficha;
-      jugador.modelo = crearPersonaje(T, ficha);
-      jugador.modelo.raiz.traverse(o => { if (o.isMesh) o.castShadow = true; });
-      escena.add(jugador.modelo.raiz);
-      localStorage.setItem(CFG.defaults.storageSkin, ficha.id);
-      document.querySelectorAll(".skin").forEach(b => b.classList.toggle("sel", b.dataset.id === ficha.id));
-      if (avisar) toast(`Skin equipada: ${ficha.nombre}`);
-    }
-
-    // ---------- Miniaturas de las skins ----------
-    const miniaturas = new Map();
-    (function generarMiniaturas() {
-      const r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-      r.setSize(260, 236, false);
-      r.outputColorSpace = T.SRGBColorSpace;
-      r.toneMapping = T.ACESFilmicToneMapping;
-      r.toneMappingExposure = 1.2;
-      const e = new T.Scene();
-      e.add(new T.HemisphereLight("#edf3ff", "#596080", 2.5));
-      const l = new T.DirectionalLight("#fff0dc", 3.4); l.position.set(4, 7, 5); e.add(l);
-      const b = new T.DirectionalLight("#a5bcff", 2.2); b.position.set(-4, 3, -4); e.add(b);
-      const c = new T.PerspectiveCamera(38, 260 / 236, 0.1, 50);
-      c.position.set(3.2, 2.75, 5.7); c.lookAt(0, 1.58, 0);
-      for (const ficha of SKINS) {
-        const m = crearPersonaje(T, ficha);
-        e.add(m.raiz);
-        r.render(e, c);
-        miniaturas.set(ficha.id, r.domElement.toDataURL("image/png"));
-        e.remove(m.raiz);
-        m.destruir();
-      }
-      r.dispose();
-      r.forceContextLoss && r.forceContextLoss();
-    })();
-
-    // ---------- Interfaz: perfil ----------
-    const modal = $("modal");
-    let perfilAbierto = false;
-
-    for (const ficha of SKINS) {
-      const b = document.createElement("button");
-      b.type = "button"; b.className = "skin"; b.dataset.id = ficha.id;
-      b.innerHTML = `<span class="badge">EQUIPADA</span><img alt=""><div class="info">
-        <strong></strong><small></small><p></p></div>`;
-      b.querySelector("img").src = miniaturas.get(ficha.id);
-      b.querySelector("strong").textContent = ficha.nombre;
-      b.querySelector("small").textContent = ficha.categoria;
-      b.querySelector("p").textContent = ficha.descripcion;
-      b.addEventListener("click", () => { if (ficha.id !== jugador.ficha.id) equipar(ficha.id, true); });
-      $("skins").appendChild(b);
-    }
-
-    const nombreGuardado = localStorage.getItem(CFG.defaults.storageNombre) || CFG.defaults.nombre;
-    $("nombreJugador").value = nombreGuardado;
-    $("nombreJugador").addEventListener("input", e => {
-      const n = e.target.value.trim() || CFG.defaults.nombre;
-      localStorage.setItem(CFG.defaults.storageNombre, n);
-    });
-
-    function abrirPerfil() { perfilAbierto = true; modal.classList.add("abierto"); teclas.clear(); }
-    function cerrarPerfil() { perfilAbierto = false; modal.classList.remove("abierto"); renderer.domElement.focus?.(); }
-    $("abrirPerfil").addEventListener("click", abrirPerfil);
-    $("cerrarPerfil").addEventListener("click", cerrarPerfil);
-    $("guardar").addEventListener("click", cerrarPerfil);
-    modal.addEventListener("click", e => { if (e.target === modal) cerrarPerfil(); });
-
-    // ---------- Interfaz: mochila ----------
-    function abrirMochila() {
-      toast("Mochila: inventario próximamente");
-    }
-    $("abrirMochila").addEventListener("click", abrirMochila);
-
-    let toastT;
-    function toast(txt) {
-      const t = $("toast");
-      t.textContent = txt; t.classList.add("ver");
-      clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("ver"), 1800);
-    }
-
-    // ---------- Acciones ----------
-    let unica = null;
-    let emote = null;
-    const botones = new Map();
-
-    function ejecutar(acc) {
-      if (jugador.carga) return;
-      if (acc.tipo === "unica") {
-        if (unica) return;
-        emote = null;
-        unica = { anim: acc.anim, t: 0, dur: acc.dur };
-      } else {
-        unica = null;
-        emote = emote === acc.anim ? null : acc.anim;
-      }
-    }
-
-    for (const acc of ACCIONES) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.innerHTML = `<span class="em">${acc.em}</span>${acc.label}<kbd>${acc.kbd}</kbd>`;
-      b.addEventListener("click", () => ejecutar(acc));
-      botones.set(acc.anim, b);
-      $("acciones").appendChild(b);
-    }
-
-    // ---------- Salto físico ----------
-    function intentarSalto() {
-      if (jugador.enAire) return;
-      jugador.vy = CFG.salto.impulso;
-      jugador.enAire = true;
-      if (window.AudioJuego && AudioJuego.listo) AudioJuego.salto();
-    }
-
-        // ---------- Agarrar / Soltar / Lanzar ----------
-    const frente = () => ({ fx: Math.sin(jugador.rot), fz: Math.cos(jugador.rot) });
-    const distCarga = c => R_JUG + c.tam / 2 + 0.1;
-
-    function cajaCercana() {
-      if (jugador.enAire || jugador.carga) return null;
-      const { fx, fz } = frente();
-      let mejor = null, mejorScore = Infinity;
-      for (const c of cajas) {
-        if (c.estado !== "suelo" || !c.tipo.agarrable) continue;
-        const h = c.tam / 2;
-        // no agarrar la caja que se está pisando
-        if (jugador.pos.y >= c.pos.y + c.tam - 0.1 &&
-            Math.abs(jugador.pos.x - c.pos.x) < h + 0.2 &&
-            Math.abs(jugador.pos.z - c.pos.z) < h + 0.2) continue;
-        if (Math.abs(c.pos.y - jugador.pos.y) > 1.2) continue;
-        const dx = c.pos.x - jugador.pos.x, dz = c.pos.z - jugador.pos.z;
-        const dc = Math.hypot(dx, dz);
-        const borde = dc - h;
-        if (borde > CAJ.distanciaAgarre) continue;
-        const alineado = (dx * fx + dz * fz) / (dc || 1);  // prioriza la que está delante
-        const score = borde - alineado * 0.5;
-        if (score < mejorScore) { mejorScore = score; mejor = c; }
-      }
-      return mejor;
-    }
-
-    function actualizarBotonesCarga() {
-      const cargando = !!jugador.carga;
-      const b = $("btnAgarrar");
-      b.textContent = cargando ? CFG.botonAgarrar.labelSoltar : CFG.botonAgarrar.label;
-      b.classList.toggle("cargando", cargando);
-      $("btnLanzar").classList.toggle("oculto", !cargando);
-    }
-
-    function agarrar() {
-      if (jugador.carga) { soltar(); return; }
-      if (unica || jugador.enAire) return;
-      const c = cajaCercana();
-      if (!c) { toast("No hay ninguna caja cerca para agarrar"); return; }
-      c.estado = "cargada";
-      c.vel.set(0, 0, 0);
-      jugador.carga = c;
-      emote = null;
-      unica = { anim: "Agarrar (objeto)", t: 0, dur: 0.25 };
-      actualizarBotonesCarga();
-    }
-
-    function liberarCaja(c) {
-      c.estado = "vuelo";
-      c.malla.rotation.y = Math.round(jugador.rot / (Math.PI / 2)) * (Math.PI / 2);
-      jugador.carga = null;
-      actualizarBotonesCarga();
-    }
-
-    function soltar() {
-      const c = jugador.carga;
-      if (!c) return;
-      const { fx, fz } = frente();
-      const d = R_JUG + c.tam / 2 + 0.05;
-      const p = { x: jugador.pos.x + fx * d, z: jugador.pos.z + fz * d };
-      fueraDeObstaculos(p, c.tam / 2);
-      c.pos.set(p.x, jugador.pos.y + 0.05, p.z);  // cae sobre el suelo o encima de otra caja
-      c.vel.set(0, 0, 0);
-      liberarCaja(c);
-    }
-
-    function lanzar() {
-      const c = jugador.carga;
-      if (!c) return;
-      const { fx, fz } = frente();
-      const d0 = distCarga(c);
-      const tx = jugador.pos.x + fx * CAJ.distanciaLanzar;
-      const tz = jugador.pos.z + fz * CAJ.distanciaLanzar;
-      const yObj = alturaApoyo(tx, tz, c.tam * 0.45, c);
-      const g = CAJ.gravedad, vy = CAJ.impulsoLanzarY;
-      // y0 + vy·t + ½·g·t² = yObj  →  tiempo de vuelo
-      const disc = vy * vy - 2 * g * (c.pos.y - yObj);
-      const t = (-vy - Math.sqrt(Math.max(0, disc))) / g;
-      const vh = Math.max(0, CAJ.distanciaLanzar - d0) / Math.max(0.1, t);
-      c.vel.set(fx * vh, vy, fz * vh);
-      liberarCaja(c);
-      unica = { anim: "Atacar (golpe de puño)", t: 0, dur: 0.25 };
-    }
-
-    function actualizarCajas(dt) {
-      for (const c of cajas) {
-        if (c.estado === "cargada") {
-          const { fx, fz } = frente();
-          const d = distCarga(c);
-          c.pos.set(jugador.pos.x + fx * d,
-                    jugador.pos.y + CAJ.alturaCarga - c.tam / 2,
-                    jugador.pos.z + fz * d);
-          sincronizarCaja(c);
-          c.malla.rotation.y = jugador.rot;
-          continue;
-        }
-        // Si se quitó la caja de abajo, empieza a caer
-        if (c.estado === "suelo" && c.pos.y > alturaApoyo(c.pos.x, c.pos.z, c.tam * 0.45, c) + 0.01) {
-          c.estado = "vuelo";
-        }
-        if (c.estado !== "vuelo") continue;
-
-        const px = c.pos.x, pz = c.pos.z;
-        c.vel.y = Math.max(c.vel.y + CAJ.gravedad * dt, -20);
-        c.pos.addScaledVector(c.vel, dt);
-        if (chocaLateral(c)) { c.pos.x = px; c.pos.z = pz; c.vel.x = c.vel.z = 0; }
-
-        const ap = alturaApoyo(c.pos.x, c.pos.z, c.tam * 0.45, c);
-        if (c.pos.y <= ap && c.vel.y <= 0) {
-          const fuerte = c.vel.y < -4;
-          c.pos.y = ap;
-          c.vel.set(0, 0, 0);
-          c.estado = "suelo";
-          if (fuerte && window.AudioJuego && AudioJuego.listo) AudioJuego.paso({ corriendo: false });
-        }
-        sincronizarCaja(c);
-      }
-    }
-
-    // ---------- Entrada: teclado ----------
-    const teclas = new Set();
-    addEventListener("keydown", e => {
-      if (perfilAbierto) { if (e.key === "Escape") cerrarPerfil(); return; }
-      if (e.target.tagName === "INPUT") return;
-      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
-      teclas.add(e.code);
-      if (e.repeat) return;
-
-      if (e.code === CFG.teclas.saltar) { intentarSalto(); return; }
-      if (e.code === CFG.teclas.agarrar) { agarrar(); return; }
-      if (e.code === CFG.teclas.lanzar)  { lanzar();  return; }
-      if (e.code === CFG.teclas.perfil) { abrirPerfil(); return; }
-      if (e.code === CFG.teclas.mochila) { abrirMochila(); return; }
-
-      const acc = ACCIONES.find(a => a.tecla === e.code);
-      if (acc) ejecutar(acc);
-    });
-    addEventListener("keyup", e => teclas.delete(e.code));
-    addEventListener("blur", () => teclas.clear());
-
-    // ---------- Entrada: joystick móvil ----------
-    const joy = { x: 0, y: 0, id: null };
-    let correrMovil = false;
-    const joyEl = $("joy"), knob = joyEl.querySelector(".knob");
-    function moverJoy(e) {
-      const r = joyEl.getBoundingClientRect();
-      let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
-      const max = r.width / 2, d = Math.hypot(dx, dy);
-      if (d > max) { dx *= max / d; dy *= max / d; }
-      knob.style.transform = `translate(${dx}px, ${dy}px)`;
-      joy.x = dx / max; joy.y = -dy / max;
-    }
-    joyEl.addEventListener("pointerdown", e => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moverJoy(e); });
-    joyEl.addEventListener("pointermove", e => { if (e.pointerId === joy.id) moverJoy(e); });
-    for (const ev of ["pointerup", "pointercancel"]) {
-      joyEl.addEventListener(ev, () => { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ""; });
-    }
-
-    // Botones físicos (multitáctil)
-    function botonFisico(el, accion) {
-      el.tabIndex = -1;
-      el.addEventListener("pointerdown", e => {
+  addEventListener("keydown", e => {
+    if (modal) {
+      if (e.code === "Escape") closeInvitation();
+      if (e.code === "Tab") {
         e.preventDefault();
-        e.stopPropagation();
-        accion();
-      });
-      el.addEventListener("click", e => e.preventDefault());
+        (document.activeElement === $("rsvp") ? $("replay") : $("rsvp")).focus();
+      }
+      return;
     }
-
-    botonFisico($("btnSaltar"), intentarSalto);
-    const accionAtacar = ACCIONES.find(a => a.tipo === "unica");
-    botonFisico($("btnAtacar"), () => { if (accionAtacar) ejecutar(accionAtacar); });
-    botonFisico($("btnAgarrar"), agarrar);
-    botonFisico($("btnLanzar"), lanzar);
-    $("btnAgarrar").textContent = CFG.botonAgarrar.label;
-    $("btnLanzar").textContent = CFG.botonLanzar.label;
-
-    botonFisico($("btnCorrer"), () => {
-      correrMovil = !correrMovil;
-      $("btnCorrer").classList.toggle("activo", correrMovil);
-    });
-
-    // ---------- Cámara orbital ----------
-    let yaw = 0, pitch = 0.42, dist = 9;
-    let arrastre = null;
-    const lienzo = renderer.domElement;
-    lienzo.addEventListener("pointerdown", e => { arrastre = { x: e.clientX, y: e.clientY, id: e.pointerId }; lienzo.setPointerCapture(e.pointerId); });
-    lienzo.addEventListener("pointermove", e => {
-      if (!arrastre || arrastre.id !== e.pointerId) return;
-      yaw -= (e.clientX - arrastre.x) * 0.008;
-      pitch = T.MathUtils.clamp(pitch + (e.clientY - arrastre.y) * 0.005, 0.08, 1.2);
-      arrastre.x = e.clientX; arrastre.y = e.clientY;
-    });
-    for (const ev of ["pointerup", "pointercancel"]) {
-      lienzo.addEventListener(ev, e => {
-        if (arrastre && arrastre.id === e.pointerId) arrastre = null;
-      });
-    }
-    lienzo.addEventListener("wheel", e => {
+    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space","KeyW","KeyA","KeyS","KeyD"].includes(e.code)) {
       e.preventDefault();
-      dist = T.MathUtils.clamp(dist + e.deltaY * 0.01, 4.5, 18);
-    }, { passive: false });
-
-    const foco = new T.Vector3();
-    function actualizarCamara(dt) {
-      const objetivo = new T.Vector3(jugador.pos.x, 1.5 + jugador.pos.y, jugador.pos.z);
-      foco.lerp(objetivo, 1 - Math.exp(-dt * 10));
-      camara.position.set(
-        foco.x + Math.sin(yaw) * Math.cos(pitch) * dist,
-        foco.y + Math.sin(pitch) * dist,
-        foco.z + Math.cos(yaw) * Math.cos(pitch) * dist
-      );
-      camara.lookAt(foco);
+      keys[e.code] = true;
+      if (e.code === "Space" && !e.repeat) strike();
     }
+  });
+  addEventListener("keyup", e => keys[e.code] = false);
+  addEventListener("blur", () => Object.keys(keys).forEach(k => keys[k] = false));
 
-    function redimensionar() {
-      renderer.setSize(innerWidth, innerHeight, false);
-      camara.aspect = innerWidth / innerHeight;
-      camara.updateProjectionMatrix();
-    }
-    addEventListener("resize", redimensionar);
-    redimensionar();
-
-    // ---------- Bucle principal ----------
-    let animActual = "", tAnim = 0, reloj = 0, pasoAcum = 0;
-
-    function colisiones(p) {
-      const R = 0.6;
-      for (const o of obstaculos) {
-        const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), min = o.r + R;
-        if (d < min && d > 0.0001) { p.x = o.x + dx / d * min; p.z = o.z + dz / d * min; }
-      }
-      p.x = T.MathUtils.clamp(p.x, -LIMITE, LIMITE);
-      p.z = T.MathUtils.clamp(p.z, -LIMITE, LIMITE);
-    }
-
-    function actualizar(dt) {
-      reloj += dt;
-
-      // --- Input ---
-      let ix = 0, iz = 0;
-      if (teclas.has("KeyW") || teclas.has("ArrowUp")) iz += 1;
-      if (teclas.has("KeyS") || teclas.has("ArrowDown")) iz -= 1;
-      if (teclas.has("KeyD") || teclas.has("ArrowRight")) ix += 1;
-      if (teclas.has("KeyA") || teclas.has("ArrowLeft")) ix -= 1;
-      ix += joy.x; iz += joy.y;
-      const mag = Math.hypot(ix, iz);
-      if (mag > 1) { ix /= mag; iz /= mag; }
-      const moviendo = mag > 0.12;
-      const corriendo = moviendo && (
-        teclas.has("ShiftLeft") || teclas.has("ShiftRight") || correrMovil
-      );
-
-      if (moviendo && emote) emote = null;
-
-      // --- Movimiento horizontal ---
-      if (moviendo) {
-        const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-        const rx = Math.cos(yaw), rz = -Math.sin(yaw);
-        let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
-        const l = Math.hypot(mx, mz); mx /= l; mz /= l;
-
-        let vel = corriendo ? CFG.movimiento.velocidadCorrer : CFG.movimiento.velocidadCaminar;
-        if (unica && !jugador.enAire) vel *= CFG.movimiento.factorAlAtacar;
-        if (jugador.carga) vel *= jugador.carga.tipo.factorVel || 1;
-        const k = Math.min(1, Math.hypot(ix, iz));
-        jugador.pos.x += mx * vel * k * dt;
-        jugador.pos.z += mz * vel * k * dt;
-        colisiones(jugador.pos);
-        colisionCajas(jugador.pos);
-
-        const objetivo = Math.atan2(mx, mz);
-        const d = Math.atan2(Math.sin(objetivo - jugador.rot), Math.cos(objetivo - jugador.rot));
-        jugador.rot += d * Math.min(1, dt * 12);
-      }
-
-      // --- Física vertical ---
-      const sueloY = alturaApoyo(jugador.pos.x, jugador.pos.z, 0.2, jugador.carga);
-      if (!jugador.enAire && jugador.pos.y > sueloY + 0.01) jugador.enAire = true;
-
-      if (jugador.enAire || jugador.vy !== 0) {
-        const S = CFG.salto;
-        let g = jugador.vy > 0 ? S.gravedad : S.gravedadCaida;
-        if (Math.abs(jugador.vy) < S.umbralApice) g *= S.factorApice;
-        jugador.vy = Math.max(jugador.vy + g * dt, S.velocidadMaxCaida);
-        jugador.pos.y += jugador.vy * dt;
-        if (jugador.pos.y <= sueloY && jugador.vy <= 0) {
-          const impacto = Math.abs(jugador.vy);
-          jugador.pos.y = sueloY;
-          jugador.vy = 0;
-          if (jugador.enAire) {
-            jugador.enAire = false;
-            jugador.aterrizando = S.duracionAterrizaje;
-            jugador.fuerzaAterrizaje = Math.min(1, impacto / Math.abs(S.velocidadMaxCaida));
-          }
-        }
-      }
-
-      // --- Cajas ---
-      actualizarCajas(dt);
-      $("btnAgarrar").classList.toggle("inactivo", !jugador.carga && !cajaCercana());
-
-
-      // --- Selección de animación ---
-      let anim;
-      if (unica) {
-        unica.t += dt;
-        if (unica.t >= unica.dur) unica = null;
-        else anim = unica.anim;
-      }
-      if (!anim && jugador.enAire) anim = CFG.salto.animacionSalto;
-      if (!anim) anim = emote || (moviendo ? (corriendo ? "Correr" : "Camina") : "Esperar");
-
-      if (anim !== animActual) {
-        animActual = anim; tAnim = 0;
-        botones.forEach((b, k) => b.classList.toggle("activo", k === anim));
-      } else tAnim += dt;
-
-      const m = jugador.modelo;
-      m.animar(unica ? unica.t : tAnim, anim);
-      m.raiz.position.copy(jugador.pos);
-      m.raiz.rotation.y = jugador.rot;
-
-      // Amortiguación visual del aterrizaje
-      if (jugador.aterrizando > 0) {
-        jugador.aterrizando = Math.max(0, jugador.aterrizando - dt);
-        const k = jugador.aterrizando / CFG.salto.duracionAterrizaje;
-        const sq = Math.sin(k * Math.PI) * 0.12 * (0.4 + 0.6 * jugador.fuerzaAterrizaje);
-        m.raiz.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
-      } else {
-        m.raiz.scale.set(1, 1, 1);
-      }
-
-      // --- Sonido de pasos ---
-      if (moviendo && !jugador.enAire && window.AudioJuego && AudioJuego.listo) {
-        const ritmo = corriendo ? CFG.sonidos.paso.ritmoCorrer : CFG.sonidos.paso.ritmoCaminar;
-        pasoAcum += dt;
-        if (pasoAcum >= ritmo) {
-          pasoAcum = 0;
-          AudioJuego.paso({ corriendo });
-        }
-      } else {
-        pasoAcum = 0;
-      }
-
-      // --- Mundo vivo ---
-      cristal.rotation.y += dt * 1.2;
-      cristal.position.y = 3.2 + Math.sin(reloj * 2) * 0.2;
-      aro.material.emissiveIntensity = 0.4 + Math.sin(reloj * 2.5) * 0.25;
-      for (const n of nubes) {
-        n.position.x += dt * 0.8;
-        if (n.position.x > 80) n.position.x = -80;
-      }
-
-      sol.position.set(jugador.pos.x + 12, 22, jugador.pos.z + 8);
-      sol.target.position.copy(jugador.pos);
-      actualizarCamara(dt);
-    }
-
-    // ---------- Inicio ----------
-    equipar(localStorage.getItem(CFG.defaults.storageSkin) || CFG.defaults.skin, false);
-    foco.set(jugador.pos.x, 1.5, jugador.pos.z);
-
-    if (window.AudioJuego) {
-      AudioJuego.init(CFG).catch(err => console.warn("Audio del jugador no disponible:", err));
-    }
-
-    let anterior = performance.now();
-    function bucle(ahora) {
-      requestAnimationFrame(bucle);
-      const dt = Math.min((ahora - anterior) / 1000, 0.05);
-      anterior = ahora;
-      if (!document.hidden) actualizar(dt);
-      renderer.render(escena, camara);
-    }
-    requestAnimationFrame(bucle);
-
-    setTimeout(() => $("carga").classList.add("fuera"), 350);
-    setTimeout(() => toast("Pulsa P para abrir tu perfil y cambiar de skin"), 1200);
-
-    lienzo.addEventListener("webglcontextlost", e => {
+  document.querySelectorAll("#pad button").forEach(b => {
+    b.addEventListener("pointerdown", e => {
       e.preventDefault();
-      toast("Se perdió el contexto gráfico. Recarga la página.");
+      b.setPointerCapture(e.pointerId);
+      keys[b.dataset.key] = true;
     });
-  })();
-  </script>
+    for (const name of ["pointerup","pointercancel","lostpointercapture"]) {
+      b.addEventListener(name, () => keys[b.dataset.key] = false);
+    }
+  });
+
+  const clock = new T.Clock();
+  const target = new T.Vector3();
+  const desired = new T.Vector3();
+  const move = new T.Vector3();
+  camera.position.set(0,12,18);
+  const cameraOffset = new T.Vector3(0,12,15);
+
+  function validPosition(x,z) {
+    if (Math.abs(x) > 8.1 || Math.abs(z) > 7.1) return false;
+    if (!opened && Math.abs(x) < 1.5 && Math.abs(z+4) < 1.5) return false;
+    return !obstacles.some(o => Math.hypot(x-o.x,z-o.z) < o.r+.32);
+  }
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), .04);
+    elapsed += dt;
+    move.set(0,0,0);
+    if (!modal) {
+      move.x = Number(!!(keys.KeyD || keys.ArrowRight)) - Number(!!(keys.KeyA || keys.ArrowLeft));
+      move.z = Number(!!(keys.KeyS || keys.ArrowDown)) - Number(!!(keys.KeyW || keys.ArrowUp));
+    }
+    const walking = move.lengthSq() > 0;
+    if (walking) {
+      move.normalize();
+      const nx = player.position.x + move.x * dt * 4.2;
+      const nz = player.position.z + move.z * dt * 4.2;
+      if (validPosition(nx,player.position.z)) player.position.x = nx;
+      if (validPosition(player.position.x,nz)) player.position.z = nz;
+      const angle = Math.atan2(move.x,move.z);
+      const delta = Math.atan2(Math.sin(angle-player.rotation.y),Math.cos(angle-player.rotation.y));
+      player.rotation.y += delta * Math.min(1, dt*14);
+    }
+
+    const gait = walking && !reduced ? Math.sin(elapsed*13)*.5 : 0;
+    leftLeg.rotation.x = gait;
+    rightLeg.rotation.x = -gait;
+    leftArm.rotation.x = -gait;
+    rightArm.rotation.x = gait;
+    player.position.y = .2 + (walking && !reduced ? Math.abs(Math.sin(elapsed*13))*.055 : 0);
+    if (punch > 0) {
+      punch -= dt;
+      rightArm.rotation.x = -Math.sin(Math.max(0,punch)/.3*Math.PI)*2;
+    }
+    if (shake > 0) {
+      shake = Math.max(0,shake-dt);
+      gift.rotation.z = reduced ? 0 : Math.sin(elapsed*65)*shake*.3;
+    } else gift.rotation.z = 0;
+
+    if (!reduced) {
+      marker.position.y = 4 + Math.sin(elapsed*2.6)*.18;
+      marker.rotation.y += dt;
+      balloons.forEach((b,i) => b.rotation.z = Math.sin(elapsed*1.4+i)*.045);
+    }
+
+    for (let i = particles.length-1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      p.v.y -= dt*6;
+      p.mesh.position.addScaledVector(p.v,dt);
+      p.mesh.rotation.x += dt*3;
+      p.mesh.rotation.z += dt*2;
+      if (p.mesh.position.y < .3) {
+        p.mesh.position.y = .3;
+        p.v.y = Math.abs(p.v.y)*.22;
+        p.v.x *= .94;
+        p.v.z *= .94;
+      }
+      if (p.life < .4) p.mesh.scale.multiplyScalar(Math.exp(-dt*8));
+      if (p.life <= 0) {
+        scene.remove(p.mesh);
+        particles.splice(i,1);
+      }
+    }
+
+    if (elapsed >= revealAt) {
+      revealAt = Infinity;
+      showInvitation();
+    }
+    const near = Math.hypot(player.position.x,player.position.z+4) < 2.9;
+    $("hit").disabled = !opened && !near;
+    const hint = opened
+      ? "¡La celebración te espera!"
+      : near
+        ? `¡Encontraste el regalo! Golpéalo ${3-hits} ${3-hits === 1 ? "vez" : "veces"} más.`
+        : "Sigue el camino hasta el gran regalo violeta";
+    if ($("hint").textContent !== hint) $("hint").textContent = hint;
+
+    target.set(player.position.x*.65, .7, player.position.z*.65-1.3);
+    desired.copy(target).add(cameraOffset);
+    if (innerWidth < 600) desired.y += 3;
+    camera.position.lerp(desired, 1-Math.exp(-dt*3));
+    camera.lookAt(target);
+    renderer.render(scene,camera);
+  }
+  addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  });
+  $("loader").remove();
+  animate();
+}
+</script>
 </body>
 </html>
