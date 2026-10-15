@@ -320,7 +320,7 @@
       if (Math.abs(x) < 2.5 || Math.abs(z) < 2.5) return false;
       return obstaculos.every(o => Math.hypot(x - o.x, z - o.z) > o.r + margen);
     }
-    for (let i = 0, n = 0; i < 400 && n < 80; i++) {
+    for (let i = 0, n = 0; i < 400 && n < 30; i++) {
       const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
       if (libre(x, z, 2)) { arbol(x, z, 0.8 + rnd() * 0.6); n++; }
     }
@@ -350,15 +350,47 @@
       malla(gFlor, coloresFlor[i % coloresFlor.length], x, 0.34, z, false);
     }
 
-    // Montañas en el horizonte
-    for (let i = 0; i < 26; i++) {
-      const a = (i / 26) * Math.PI * 2 + rnd() * 0.2;
-      const d = 70 + rnd() * 15, h = 14 + rnd() * 16;
-      const m = malla(new T.ConeGeometry(9 + rnd() * 6, h, 5), i % 2 ? "#6f8f7a" : "#7d9a86",
-        Math.cos(a) * d, h / 2 - 0.5, Math.sin(a) * d, false);
-      m.material.flatShading = true;
-      m.rotation.y = rnd() * 3;
-    }
+    // Muro perimetral (altura 8) que encierra el mapa
+   (function construirMuro() {
+      const ALTO = 8;
+      const GROSOR = 1.2;
+      const LADO = LIMITE * 2 + GROSOR;   // cubre el borde exacto del área jugable
+      const colorMuro = "#8a8478";
+      const colorRemate = "#6f6a60";
+
+    // Cuatro paredes: norte, sur, este, oeste
+   const paredes = [
+     { w: LADO, h: ALTO, d: GROSOR, x: 0, z: -LIMITE - GROSOR / 2 },
+     { w: LADO, h: ALTO, d: GROSOR, x: 0, z:  LIMITE + GROSOR / 2 },
+     { w: GROSOR, h: ALTO, d: LADO, x: -LIMITE - GROSOR / 2, z: 0 },
+     { w: GROSOR, h: ALTO, d: LADO, x:  LIMITE + GROSOR / 2, z: 0 },
+   ];
+
+  for (const p of paredes) {
+    const m = malla(new T.BoxGeometry(p.w, p.h, p.d), colorMuro, p.x, p.h / 2, p.z);
+    m.receiveShadow = true;
+
+    // Remate superior (una franja más oscura para dar lectura visual)
+    const remate = malla(
+      new T.BoxGeometry(p.w + 0.15, 0.5, p.d + 0.15),
+      colorRemate, p.x, p.h + 0.25, p.z
+    );
+    remate.castShadow = true;
+
+    // Registramos el muro como obstáculo sólido (varios círculos a lo largo)
+    const largo = Math.max(p.w, p.d);
+    const pasos = Math.ceil(largo / 1.5);
+    const esHorizontal = p.w > p.d;
+    for (let i = 0; i <= pasos; i++) {
+      const t = i / pasos - 0.5;
+      obstaculos.push({
+        x: esHorizontal ? p.x + t * p.w : p.x,
+        z: esHorizontal ? p.z : p.z + t * p.d,
+        r: GROSOR * 0.6,
+          });
+        }
+       }
+     })();
 
     // Nubes
     const nubes = [];
