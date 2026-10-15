@@ -2448,7 +2448,7 @@
       const s = Math.sin;
       const pi = Math.PI;
       const ciclo = (t * 0.85) % 1;
-      const golpe = Math.pow(Math.max(0, s(t * 6)), 3);
+      const golpe = Math.pow(Math.max(0, s(t * 10)), 3);
 
       brazoI.rotation.z = -0.06;
       brazoD.rotation.z = 0.06;
