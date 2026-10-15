@@ -707,7 +707,6 @@ botonFisico($("btnCorrer"), () => {
           jugador.vy = 0;
           if (jugador.enAire) {
             jugador.enAire = false;
-            jugador.aterrizando = CFG.salto.duracionAterrizaje;
             if (window.AudioJuego && AudioJuego.listo) AudioJuego.aterrizaje(impacto);
           }
         }
@@ -739,7 +738,7 @@ botonFisico($("btnCorrer"), () => {
 
 
       // --- Sonido de pasos ---
-      if (moviendo && !jugador.enAire && jugador.aterrizando === 0 &&
+      if (moviendo && !jugador.enAire &&
           window.AudioJuego && AudioJuego.listo) {
         const ritmo = corriendo ? CFG.sonidos.paso.ritmoCorrer : CFG.sonidos.paso.ritmoCaminar;
         pasoAcum += dt;
