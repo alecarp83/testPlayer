@@ -360,7 +360,9 @@ $("place").textContent = `${EVENTO.lugar} · ${EVENTO.direccion}`;
 
 if (EVENTO.telefono) {
   const mensaje = `¡Hola! Confirmo mi asistencia al cumpleaños de ${EVENTO.nombre}.`;
-  $("rsvp").href = `https://wa.me/${EVENTO.telefono.replace(/\D/g) ""}?text=${encodeURIComponent(mensaje)}`;
+  //$("rsvp").href = `https://wa.me/${EVENTO.telefono.replace(/\D/g) ""}?text=${encodeURIComponent(mensaje)}`;
+  $("rsvp").href = `https://wa.me/${EVENTO.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(mensaje)}`;
+  
 } else {
   const texto = `¡${EVENTO.nombre} cumple ${EVENTO.edad}!\n${EVENTO.fecha} · ${EVENTO.hora}\n${EVENTO.lugar}\n${EVENTO.direccion}`;
   $("rsvp").href = URL.createObjectURL(new Blob([texto], { type: "text/plain;charset=utf-8" }));
