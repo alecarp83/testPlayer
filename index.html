@@ -393,11 +393,11 @@ function iniciar(T) {
   renderer.shadowMap.type = T.PCFSoftShadowMap;
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.05;         // antes 1.2
   $("world").appendChild(renderer.domElement);
 
-  scene.add(new T.HemisphereLight("#fff4ef", "#74659b", 2.5));
-  const sun = new T.DirectionalLight("#fff1dd", 3.4);
+  scene.add(new T.HemisphereLight("#ffffff", "#5a4a8f", 2.2));  // antes #fff4ef / #74659b
+  const sun = new T.DirectionalLight("#fff3e0", 3.0);           // antes 3.4
   sun.position.set(-8, 16, 8);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
