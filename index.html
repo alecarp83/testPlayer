@@ -155,12 +155,22 @@
       .btn-perfil span:last-child { display: none; }
       .salud { min-width: 0; width: min(230px, 60vw); }
     }
-    #btnSaltar, #btnCorrer, #btnAtacar {
+        #btnAgarrar { position: fixed; right: 176px; bottom: 196px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 10px; font-weight: 700; transition: opacity .15s; }
+    #btnAgarrar.inactivo { opacity: .45; }
+    #btnAgarrar.cargando { background: rgba(196,255,131,.2); border-color: var(--accent); color: var(--accent); }
+    #btnLanzar { position: fixed; right: 176px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 10px; font-weight: 700; }
+    #btnLanzar:active, #btnAgarrar:active { background: var(--accent); color: #223017; }
+    .oculto { display: none !important; }
+
+    #btnSaltar, #btnCorrer, #btnAtacar, #btnAgarrar, #btnLanzar {
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
+
   </style>
 </head>
 <body>
@@ -185,6 +195,7 @@
 
   <div class="ayuda glass">
     <b>Moverse</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <b>Correr</b> <kbd>Shift</kbd> · <b>Saltar</b> <kbd>Space</kbd><br>
+    <b>Agarrar/Soltar</b> <kbd>E</kbd> · <b>Lanzar</b> <kbd>R</kbd><br>
     <b>Cámara</b> arrastrar · rueda para zoom · <b>Perfil</b> <kbd>P</kbd> · <b>Mochila</b> <kbd>B</kbd>
   </div>
 
@@ -194,6 +205,8 @@
   <button id="btnCorrer" class="glass" type="button">CORRER</button>
   <button id="btnSaltar" class="glass" type="button" aria-label="Saltar">SALTAR</button>
   <button id="btnAtacar" class="glass" type="button" aria-label="Atacar">ATACAR</button>
+  <button id="btnAgarrar" class="glass inactivo" type="button" aria-label="Agarrar">AGARRAR</button>
+  <button id="btnLanzar" class="glass oculto" type="button" aria-label="Lanzar">LANZAR</button>
 
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="tituloPerfil">
     <div class="tarjeta">
