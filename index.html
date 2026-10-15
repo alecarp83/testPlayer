@@ -587,9 +587,16 @@
     }
     joyEl.addEventListener("pointerdown", e => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moverJoy(e); });
     joyEl.addEventListener("pointermove", e => { if (e.pointerId === joy.id) moverJoy(e); });
+    /*
     for (const ev of ["pointerup", "pointercancel"]) {
       joyEl.addEventListener(ev, () => { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ""; });
+    } */
+     for (const ev of ["pointerup", "pointercancel"]) {
+      lienzo.addEventListener(ev, e => {
+        if (arrastre && arrastre.id === e.pointerId) arrastre = null;
+      });
     }
+
     
     // Botones físicos: pointerdown funciona en multitáctil (joystick + botón a la vez)
 function botonFisico(el, accion) {
