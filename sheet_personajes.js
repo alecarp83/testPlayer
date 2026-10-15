@@ -2500,14 +2500,16 @@
           break;
 
         case "Saltar": {
-          const salto = Math.sin(ciclo * pi);
-          cuerpo.position.y += salto * 0.90;
-          brazoI.rotation.z = -salto * 2.45;
-          brazoD.rotation.z = salto * 2.45;
-          piernaI.rotation.x = salto * 0.28;
-          piernaD.rotation.x = -salto * 0.28;
+          // Solo pose: la altura la controla la física del juego
+          const k = Math.min(1, t * 4); // entra suavemente en 0.25 s
+          brazoI.rotation.z = -k * 2.2;
+          brazoD.rotation.z = k * 2.2;
+          piernaI.rotation.x = k * 0.45;
+          piernaD.rotation.x = -k * 0.15;
+          torso.rotation.x = -k * 0.08;
           break;
         }
+
 
         case "Atacar (golpe de puño)":
           brazoD.rotation.x = -0.45 - golpe * 1.45;
