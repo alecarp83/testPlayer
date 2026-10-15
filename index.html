@@ -199,7 +199,11 @@
     const { PERSONAJES, crearPersonaje } = window.Catalogo3D;
 
     // ---------- Configuración del juego ----------
-    const SKINS = ["kitsune", "panda", "merlin", "aura", "alex", "nova", "salvia", "akira", "yuki"]
+    const SKINS = ["kitsune", "panda", "merlin", "aura", "alex", 
+                   "nova", "salvia", "akira", "yuki", "atlas", 
+                   "ember", "onyx", "chicle", "menta", "leo", 
+                   "vera", "nico", "alma", "bruno", "roldan", 
+                   "sigrid", "kael", "duna", "ferrum", "boreal", "brasa"]
       .map(id => PERSONAJES.find(p => p.id === id)).filter(Boolean);
 
     const ACCIONES = [
