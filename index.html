@@ -27,19 +27,33 @@
     .top { position: fixed; top: 16px; left: 16px; right: 16px; display: flex;
       justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
     .top > * { pointer-events: auto; }
-    .jugador { display: flex; align-items: center; gap: 12px; padding: 8px 16px 8px 8px; border-radius: 18px; }
-    .jugador img { width: 52px; height: 52px; border-radius: 13px; object-fit: contain;
-      background: radial-gradient(ellipse, #3a4160, #1d2131 72%); }
-    .jugador strong { display: block; font-size: 15px; letter-spacing: -.3px; }
-    .jugador small { color: var(--muted); font-size: 11px; }
-    .estado { margin-top: 4px; font-size: 11px; color: var(--accent); display: flex; align-items: center; gap: 6px; }
-    .estado::before { content: ""; width: 7px; height: 7px; border-radius: 50%;
-      background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+    /* Barra de salud */
+    .salud { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px;
+      min-width: 230px; }
+    .salud .corazon { font-size: 20px; line-height: 1; filter: drop-shadow(0 0 6px rgba(255,90,110,.6)); }
+    .salud .cuerpo { flex: 1; }
+    .salud .fila { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1.5px;
+      color: var(--muted); margin-bottom: 5px; }
+    .salud .fila b { color: var(--text); font-weight: 700; letter-spacing: 0; }
+    .salud .barra { height: 12px; border-radius: 7px; background: rgba(0,0,0,.4);
+      border: 1px solid rgba(255,255,255,.1); overflow: hidden; }
+    .salud .relleno { height: 100%; width: 50%; border-radius: 7px;
+      background: linear-gradient(90deg, #7fdc4a, #c4ff83); box-shadow: 0 0 10px rgba(196,255,131,.5);
+      transition: width .3s ease, background .3s; }
+    .salud.media .relleno { background: linear-gradient(90deg, #e0b13a, #ffe07a); box-shadow: 0 0 10px rgba(255,224,122,.5); }
+    .salud.baja .relleno { background: linear-gradient(90deg, #d8394d, #ff7a8a); box-shadow: 0 0 10px rgba(255,90,110,.6); }
+
+    /* Columna derecha: Perfil + Mochila */
+    .derecha { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
     .btn-perfil { display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-radius: 16px;
       font-weight: 600; font-size: 13px; transition: transform .15s, border-color .15s; }
     .btn-perfil:hover { border-color: var(--accent); transform: translateY(-1px); }
     .btn-perfil .ico { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
       background: var(--accent); color: #223017; font-weight: 900; transform: rotate(-7deg); }
+    .btn-mochila { width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center;
+      font-size: 24px; line-height: 1; padding: 0; transition: transform .15s, border-color .15s; }
+    .btn-mochila:hover { border-color: var(--accent); transform: translateY(-1px); }
 
     /* Barra de acciones */
     .acciones { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
@@ -68,7 +82,6 @@
       display: none; font-size: 11px; font-weight: 700; }
     #btnCorrer.activo { background: var(--accent); color: #223017; }
 
-    /* Botón físico Saltar: visible SIEMPRE (escritorio y táctil) */
     #btnSaltar { position: fixed; right: 100px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
       display: block; font-size: 11px; font-weight: 700; }
     #btnSaltar.activo { background: var(--accent); color: #223017; }
@@ -76,7 +89,6 @@
     #btnAtacar { position: fixed; right: 100px; bottom: 196px; width: 66px; height: 66px; border-radius: 50%;
       display: block; font-size: 11px; font-weight: 700; }
     #btnAtacar:active { background: var(--accent); color: #223017; }
-
 
     /* Modal perfil */
     .modal { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px;
@@ -141,14 +153,14 @@
       .skin { display: grid; grid-template-columns: 110px 1fr; }
       .skin img { height: 100%; aspect-ratio: auto; }
       .btn-perfil span:last-child { display: none; }
+      .salud { min-width: 0; width: min(230px, 60vw); }
     }
-  #btnSaltar, #btnCorrer, #btnAtacar {
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
+    #btnSaltar, #btnCorrer, #btnAtacar {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 <body>
@@ -156,22 +168,24 @@
   <div id="mundo"></div>
 
   <div class="top">
-    <div class="jugador glass">
-      <img id="hudImg" alt="">
-      <div>
-        <strong id="hudNombre">Jugador</strong>
-        <small id="hudSkin">Bambú · Animales</small>
-        <div class="estado" id="hudAccion">Esperar</div>
+    <div class="salud glass" id="salud" role="meter" aria-label="Salud" aria-valuemin="0">
+      <span class="corazon">❤️</span>
+      <div class="cuerpo">
+        <div class="fila"><span>SALUD</span><b id="saludTxt">50 / 100</b></div>
+        <div class="barra"><div class="relleno" id="saludRelleno"></div></div>
       </div>
     </div>
-    <button class="btn-perfil glass" id="abrirPerfil" type="button">
-      <span class="ico">C</span><span>Perfil</span>
-    </button>
+    <div class="derecha">
+      <button class="btn-perfil glass" id="abrirPerfil" type="button">
+        <span class="ico">C</span><span>Perfil</span>
+      </button>
+      <button class="btn-mochila glass" id="abrirMochila" type="button" aria-label="Mochila" title="Mochila">🎒</button>
+    </div>
   </div>
 
   <div class="ayuda glass">
     <b>Moverse</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <b>Correr</b> <kbd>Shift</kbd> · <b>Saltar</b> <kbd>Space</kbd><br>
-    <b>Cámara</b> arrastrar · rueda para zoom · <b>Perfil</b> <kbd>P</kbd>
+    <b>Cámara</b> arrastrar · rueda para zoom · <b>Perfil</b> <kbd>P</kbd> · <b>Mochila</b> <kbd>B</kbd>
   </div>
 
   <nav class="acciones glass" id="acciones" aria-label="Animaciones"></nav>
@@ -180,7 +194,6 @@
   <button id="btnCorrer" class="glass" type="button">CORRER</button>
   <button id="btnSaltar" class="glass" type="button" aria-label="Saltar">SALTAR</button>
   <button id="btnAtacar" class="glass" type="button" aria-label="Atacar">ATACAR</button>
-
 
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="tituloPerfil">
     <div class="tarjeta">
@@ -203,7 +216,7 @@
 
   <div id="toast" class="glass"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js)"></script>
   <script src="./sheet_personajes.js"></script>
   <script src="./config_player.js"></script>
   <script src="./audio_juego.js"></script>
@@ -220,14 +233,13 @@
     const T = window.THREE;
     const { PERSONAJES, crearPersonaje } = window.Catalogo3D;
 
-    // ---------- Configuración del jugador (externa y reutilizable) ----------
+    // ---------- Configuración del jugador ----------
     const CFG = window.ConfigPlayer;
     if (!CFG) {
       $("cargaTxt").textContent = "Falta config_player.js junto a este archivo.";
       return;
     }
     const ACCIONES = CFG.acciones;
-    const NOMBRES = CFG.nombresHUD;
 
     // ---------- Skins jugables ----------
     const SKINS = ["kitsune", "panda", "merlin", "aura", "alex",
@@ -302,7 +314,7 @@
       malla(new T.BoxGeometry(w, 0.08, d), "#cdbf9d", x, 0.04, z, false);
     }
 
-    // Cristal flotante en la plaza (decorativo)
+    // Cristal flotante
     const cristal = malla(new T.OctahedronGeometry(0.6), "#c4ff83", 0, 3.2, 0);
     cristal.material = new T.MeshStandardMaterial({ color: "#c4ff83", emissive: "#9be05a", emissiveIntensity: .6, roughness: .3 });
     malla(new T.CylinderGeometry(0.7, 0.9, 0.9, 6), "#9aa1b5", 0, 0.55, 0);
@@ -316,7 +328,7 @@
     malla(new T.TorusGeometry(5.6, 0.35, 6, 40), "#a5a99e", 16, 0.05, -15).rotation.x = Math.PI / 2;
     obstaculos.push({ x: 16, z: -15, r: 5.8 });
 
-    // Árboles de bloques (cantidad reducida a la mitad)
+    // Árboles
     const gTronco = new T.BoxGeometry(0.5, 1.6, 0.5);
     const gHoja1 = new T.BoxGeometry(2.2, 1.3, 2.2);
     const gHoja2 = new T.BoxGeometry(1.5, 1, 1.5);
@@ -367,7 +379,7 @@
       malla(gFlor, coloresFlor[i % coloresFlor.length], x, 0.34, z, false);
     }
 
-    // Muro perimetral (altura 8) que encierra el mapa
+    // Muro perimetral
     (function construirMuro() {
       const ALTO = 8;
       const GROSOR = 1.2;
@@ -385,11 +397,7 @@
       for (const p of paredes) {
         const m = malla(new T.BoxGeometry(p.w, p.h, p.d), colorMuro, p.x, p.h / 2, p.z);
         m.receiveShadow = true;
-
-        const remate = malla(
-          new T.BoxGeometry(p.w + 0.15, 0.5, p.d + 0.15),
-          colorRemate, p.x, p.h + 0.25, p.z
-        );
+        const remate = malla(new T.BoxGeometry(p.w + 0.15, 0.5, p.d + 0.15), colorRemate, p.x, p.h + 0.25, p.z);
         remate.castShadow = true;
 
         const largo = Math.max(p.w, p.d);
@@ -424,6 +432,7 @@
     }
 
     // ---------- Personaje del jugador ----------
+    const SALUD = CFG.salud || { max: 100, inicial: 50, umbralMedio: 0.5, umbralBajo: 0.25 };
     const jugador = {
       pos: new T.Vector3(0, 0, 8),
       rot: Math.PI,
@@ -431,9 +440,35 @@
       enAire: false,
       aterrizando: 0,
       fuerzaAterrizaje: 0,
+      salud: SALUD.inicial,
+      saludMax: SALUD.max,
       modelo: null,
       ficha: null,
     };
+
+    // ---------- Barra de salud ----------
+    function actualizarSalud() {
+      const r = jugador.salud / jugador.saludMax;
+      const el = $("salud");
+      $("saludRelleno").style.width = (r * 100) + "%";
+      $("saludTxt").textContent = `${Math.round(jugador.salud)} / ${jugador.saludMax}`;
+      el.classList.toggle("media", r < SALUD.umbralMedio && r >= SALUD.umbralBajo);
+      el.classList.toggle("baja", r < SALUD.umbralBajo);
+      el.setAttribute("aria-valuemax", jugador.saludMax);
+      el.setAttribute("aria-valuenow", Math.round(jugador.salud));
+    }
+    function setSalud(v) {
+      jugador.salud = T.MathUtils.clamp(v, 0, jugador.saludMax);
+      actualizarSalud();
+    }
+    // API para otros scripts / consola
+    window.Jugador = {
+      get salud() { return jugador.salud; },
+      setSalud,
+      danar: n => setSalud(jugador.salud - n),
+      curar: n => setSalud(jugador.salud + n),
+    };
+    actualizarSalud();
 
     function equipar(id, avisar) {
       const ficha = SKINS.find(s => s.id === id) || SKINS[0];
@@ -446,8 +481,6 @@
       jugador.modelo.raiz.traverse(o => { if (o.isMesh) o.castShadow = true; });
       escena.add(jugador.modelo.raiz);
       localStorage.setItem(CFG.defaults.storageSkin, ficha.id);
-      $("hudImg").src = miniaturas.get(ficha.id);
-      $("hudSkin").textContent = `${ficha.nombre} · ${ficha.categoria}`;
       document.querySelectorAll(".skin").forEach(b => b.classList.toggle("sel", b.dataset.id === ficha.id));
       if (avisar) toast(`Skin equipada: ${ficha.nombre}`);
     }
@@ -497,10 +530,8 @@
 
     const nombreGuardado = localStorage.getItem(CFG.defaults.storageNombre) || CFG.defaults.nombre;
     $("nombreJugador").value = nombreGuardado;
-    $("hudNombre").textContent = nombreGuardado;
     $("nombreJugador").addEventListener("input", e => {
       const n = e.target.value.trim() || CFG.defaults.nombre;
-      $("hudNombre").textContent = n;
       localStorage.setItem(CFG.defaults.storageNombre, n);
     });
 
@@ -510,6 +541,12 @@
     $("cerrarPerfil").addEventListener("click", cerrarPerfil);
     $("guardar").addEventListener("click", cerrarPerfil);
     modal.addEventListener("click", e => { if (e.target === modal) cerrarPerfil(); });
+
+    // ---------- Interfaz: mochila ----------
+    function abrirMochila() {
+      toast("Mochila: inventario próximamente");
+    }
+    $("abrirMochila").addEventListener("click", abrirMochila);
 
     let toastT;
     function toast(txt) {
@@ -560,13 +597,10 @@
       teclas.add(e.code);
       if (e.repeat) return;
 
-      // Salto físico
       if (e.code === CFG.teclas.saltar) { intentarSalto(); return; }
-
-      // Perfil
       if (e.code === CFG.teclas.perfil) { abrirPerfil(); return; }
+      if (e.code === CFG.teclas.mochila) { abrirMochila(); return; }
 
-      // Acciones de barra
       const acc = ACCIONES.find(a => a.tecla === e.code);
       if (acc) ejecutar(acc);
     });
@@ -587,34 +621,28 @@
     }
     joyEl.addEventListener("pointerdown", e => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moverJoy(e); });
     joyEl.addEventListener("pointermove", e => { if (e.pointerId === joy.id) moverJoy(e); });
-    
     for (const ev of ["pointerup", "pointercancel"]) {
       joyEl.addEventListener(ev, () => { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ""; });
-    } 
-     
+    }
 
-    
-    // Botones físicos: pointerdown funciona en multitáctil (joystick + botón a la vez)
-function botonFisico(el, accion) {
-  el.tabIndex = -1; // evita que el botón tome el foco y capture Space/Enter
-  el.addEventListener("pointerdown", e => {
-    e.preventDefault();
-    e.stopPropagation();
-    accion();
-  });
-  el.addEventListener("click", e => e.preventDefault());
-}
+    // Botones físicos (multitáctil)
+    function botonFisico(el, accion) {
+      el.tabIndex = -1;
+      el.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        accion();
+      });
+      el.addEventListener("click", e => e.preventDefault());
+    }
 
-botonFisico($("btnSaltar"), intentarSalto);
-const accionAtacar = ACCIONES.find(a => a.tipo === "unica");
-botonFisico($("btnAtacar"), () => { if (accionAtacar) ejecutar(accionAtacar); });
-
-
-botonFisico($("btnCorrer"), () => {
-  correrMovil = !correrMovil;
-  $("btnCorrer").classList.toggle("activo", correrMovil);
-});
-
+    botonFisico($("btnSaltar"), intentarSalto);
+    const accionAtacar = ACCIONES.find(a => a.tipo === "unica");
+    botonFisico($("btnAtacar"), () => { if (accionAtacar) ejecutar(accionAtacar); });
+    botonFisico($("btnCorrer"), () => {
+      correrMovil = !correrMovil;
+      $("btnCorrer").classList.toggle("activo", correrMovil);
+    });
 
     // ---------- Cámara orbital ----------
     let yaw = 0, pitch = 0.42, dist = 9;
@@ -627,14 +655,6 @@ botonFisico($("btnCorrer"), () => {
       pitch = T.MathUtils.clamp(pitch + (e.clientY - arrastre.y) * 0.005, 0.08, 1.2);
       arrastre.x = e.clientX; arrastre.y = e.clientY;
     });
-    /*
-    for (const ev of ["pointerup", "pointercancel"]) {
-  joyEl.addEventListener(ev, e => {
-    if (e.pointerId !== joy.id) return;
-    joy.id = null; joy.x = joy.y = 0; knob.style.transform = "";
-  });
-}
-*/
     for (const ev of ["pointerup", "pointercancel"]) {
       lienzo.addEventListener(ev, e => {
         if (arrastre && arrastre.id === e.pointerId) arrastre = null;
@@ -705,9 +725,7 @@ botonFisico($("btnCorrer"), () => {
         const l = Math.hypot(mx, mz); mx /= l; mz /= l;
 
         let vel = corriendo ? CFG.movimiento.velocidadCorrer : CFG.movimiento.velocidadCaminar;
-        //if (unica && unica.anim !== CFG.salto.animacionSalto) vel *= CFG.movimiento.factorAlAtacar;
         if (unica && !jugador.enAire) vel *= CFG.movimiento.factorAlAtacar;
-
 
         const k = Math.min(1, Math.hypot(ix, iz));
         jugador.pos.x += mx * vel * k * dt;
@@ -720,7 +738,6 @@ botonFisico($("btnCorrer"), () => {
       }
 
       // --- Física vertical ---
-            // --- Física vertical ---
       if (jugador.enAire || jugador.vy !== 0) {
         const S = CFG.salto;
         let g = jugador.vy > 0 ? S.gravedad : S.gravedadCaida;
@@ -735,13 +752,11 @@ botonFisico($("btnCorrer"), () => {
             jugador.enAire = false;
             jugador.aterrizando = S.duracionAterrizaje;
             jugador.fuerzaAterrizaje = Math.min(1, impacto / Math.abs(S.velocidadMaxCaida));
-            // Sonido de aterrizaje eliminado
           }
         }
       }
 
-      // --- Temporizador de aterrizaje ---
-            // --- Selección de animación (sin estado de aterrizaje) ---
+      // --- Selección de animación ---
       let anim;
       if (unica) {
         unica.t += dt;
@@ -751,34 +766,28 @@ botonFisico($("btnCorrer"), () => {
       if (!anim && jugador.enAire) anim = CFG.salto.animacionSalto;
       if (!anim) anim = emote || (moviendo ? (corriendo ? "Correr" : "Camina") : "Esperar");
 
-
       if (anim !== animActual) {
         animActual = anim; tAnim = 0;
-        $("hudAccion").textContent = NOMBRES[anim] || anim;
         botones.forEach((b, k) => b.classList.toggle("activo", k === anim));
       } else tAnim += dt;
 
       const m = jugador.modelo;
       m.animar(unica ? unica.t : tAnim, anim);
-      // La física manda: se fija la posición DESPUÉS de animar
       m.raiz.position.copy(jugador.pos);
       m.raiz.rotation.y = jugador.rot;
 
-      // Amortiguación visual del aterrizaje (squash suave)
+      // Amortiguación visual del aterrizaje
       if (jugador.aterrizando > 0) {
         jugador.aterrizando = Math.max(0, jugador.aterrizando - dt);
-        const k = jugador.aterrizando / CFG.salto.duracionAterrizaje; // 1 → 0
+        const k = jugador.aterrizando / CFG.salto.duracionAterrizaje;
         const sq = Math.sin(k * Math.PI) * 0.12 * (0.4 + 0.6 * jugador.fuerzaAterrizaje);
         m.raiz.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
       } else {
         m.raiz.scale.set(1, 1, 1);
       }
 
-
-
       // --- Sonido de pasos ---
-      if (moviendo && !jugador.enAire &&
-          window.AudioJuego && AudioJuego.listo) {
+      if (moviendo && !jugador.enAire && window.AudioJuego && AudioJuego.listo) {
         const ritmo = corriendo ? CFG.sonidos.paso.ritmoCorrer : CFG.sonidos.paso.ritmoCaminar;
         pasoAcum += dt;
         if (pasoAcum >= ritmo) {
@@ -807,7 +816,6 @@ botonFisico($("btnCorrer"), () => {
     equipar(localStorage.getItem(CFG.defaults.storageSkin) || CFG.defaults.skin, false);
     foco.set(jugador.pos.x, 1.5, jugador.pos.z);
 
-    // Audio del jugador: precarga buffers por código (no bloquea el arranque visual)
     if (window.AudioJuego) {
       AudioJuego.init(CFG).catch(err => console.warn("Audio del jugador no disponible:", err));
     }

@@ -1,10 +1,6 @@
 /* config_player.js
  * Configuración reutilizable del jugador.
  * Se cuelga en window.ConfigPlayer (mismo patrón que sheet_personajes.js).
- *
- * Todo lo que dependa del jugador (acciones, teclas, física, sonidos,
- * estados→animación, HUD, defaults) vive aquí para poder reutilizarlo
- * entre mapas sin tocar index.html.
  */
 (function () {
   "use strict";
@@ -22,11 +18,20 @@
     },
 
     // ---------------------------------------------------------------
+    // Salud del jugador
+    // ---------------------------------------------------------------
+    salud: {
+      max: 100,
+      inicial: 50,          // empieza con la mitad
+      umbralMedio: 0.5,     // por debajo: color amarillo
+      umbralBajo: 0.25,     // por debajo: color rojo
+    },
+
+    // ---------------------------------------------------------------
     // Acciones de la barra inferior (emotes / ataques).
-    // "Saltar" YA NO está aquí: es acción física con botón propio.
-    // --------------------------------------------------------------- dur: Math.PI / 6
+    // ---------------------------------------------------------------
     acciones: [
-      { anim: "Atacar (golpe de puño)", label: "Atacar",  em: "👊", tecla: "KeyF",   kbd: "F", tipo: "unica", dur: 0.30 }, 
+      { anim: "Atacar (golpe de puño)", label: "Atacar",  em: "👊", tecla: "KeyF",   kbd: "F", tipo: "unica", dur: 0.30 },
       { anim: "Baile 1",                 label: "Bailar 1", em: "🕺", tecla: "Digit1", kbd: "1", tipo: "emote" },
       { anim: "Baile 2",                 label: "Bailar 2", em: "💃", tecla: "Digit2", kbd: "2", tipo: "emote" },
       { anim: "Baile 3",                 label: "Bailar 3", em: "🤖", tecla: "Digit3", kbd: "3", tipo: "emote" },
@@ -36,18 +41,18 @@
     // ---------------------------------------------------------------
     // Física del salto
     // ---------------------------------------------------------------
-        salto: {
-      impulso: 9.6,            // antes 7.0 → altura ≈ 2.1 (antes ≈ 1.1), +1 unidad
-      gravedad: -22.0,         // gravedad al subir
-      gravedadCaida: -15.0,    // gravedad al bajar (más suave = aterrizaje natural)
-      velocidadMaxCaida: -11.0,// límite de velocidad al caer
-      umbralApice: 1.5,        // |vy| por debajo del cual se "flota" en el punto alto
-      factorApice: 0.6,        // gravedad reducida en el punto alto
+    salto: {
+      impulso: 9.6,
+      gravedad: -22.0,
+      gravedadCaida: -15.0,
+      velocidadMaxCaida: -11.0,
+      umbralApice: 1.5,
+      factorApice: 0.6,
       permiteDobleSalto: false,
       coyoteTime: 0,
       animacionSalto: "Saltar",
       animacionAterrizaje: "Aterrizaje",
-      duracionAterrizaje: 0.22,          // s de amortiguación visual al tocar suelo
+      duracionAterrizaje: 0.22,
       umbralAterrizajeFuerte: 6.0,
     },
 
@@ -57,14 +62,13 @@
     movimiento: {
       velocidadCaminar: 3.2,
       velocidadCorrer: 7.0,
-      factorAlAtacar: 0.7,    // multiplicador de velocidad durante acción "unica"
+      factorAlAtacar: 0.7,
     },
-    // ---------------------------------------------------
-    // Config nuevo botón
-      botonAtacar: {
-        icono: "👊",
-        label: "ATACAR",
-      },
+
+    botonAtacar: {
+      icono: "👊",
+      label: "ATACAR",
+    },
 
     // ---------------------------------------------------------------
     // Estados → nombre de animación en el catálogo 3D
@@ -83,7 +87,7 @@
     },
 
     // ---------------------------------------------------------------
-    // Nombres legibles para el HUD
+    // Nombres legibles (se conservan por si se reutilizan)
     // ---------------------------------------------------------------
     nombresHUD: {
       "Esperar": "Esperar",
@@ -99,10 +103,11 @@
     },
 
     // ---------------------------------------------------------------
-    // Teclas especiales (no asociadas a acciones de barra)
+    // Teclas especiales
     // ---------------------------------------------------------------
     teclas: {
       perfil: "KeyP",
+      mochila: "KeyB",
       correr: ["ShiftLeft", "ShiftRight"],
       saltar: "Space",
       arriba: ["KeyW", "ArrowUp"],
@@ -112,18 +117,17 @@
     },
 
     // ---------------------------------------------------------------
-    // Sonidos del jugador (IDs que audio_juego.js debe precargar)
-    // Todos se generan por código reutilizando Synth de script_audios.js.
+    // Sonidos del jugador
     // ---------------------------------------------------------------
     sonidos: {
       paso: {
         efecto: "step-stone",
         pitchCaminar: 1.0,
-        pitchCorrer: 1.12,      // ~+2 st
-        ritmoCaminar: 0.45,     // s entre pasos
+        pitchCorrer: 1.12,
+        ritmoCaminar: 0.45,
         ritmoCorrer: 0.25,
-        volumen: 0.5,           // medio (salto = 1.0)
-        variantes: 3,           // 3 buffers con leve variación
+        volumen: 0.5,
+        variantes: 3,
       },
       salto: {
         efecto: "move-jump",
@@ -139,11 +143,11 @@
     },
 
     // ---------------------------------------------------------------
-    // Configuración del botón físico "Saltar"
+    // Botones
     // ---------------------------------------------------------------
     botonSaltar: {
       visibleSiempre: true,
-      deshabilitadoEnAire: false, // por ahora siempre habilitado
+      deshabilitadoEnAire: false,
       icono: "⤒",
       label: "SALTAR",
     },
@@ -151,6 +155,11 @@
     botonCorrer: {
       icono: "",
       label: "CORRER",
+    },
+
+    botonMochila: {
+      icono: "🎒",
+      aria: "Mochila",
     },
   };
 
