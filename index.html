@@ -68,6 +68,11 @@
       display: none; font-size: 11px; font-weight: 700; }
     #btnCorrer.activo { background: var(--accent); color: #223017; }
 
+    /* Botón físico Saltar: visible SIEMPRE (escritorio y táctil) */
+    #btnSaltar { position: fixed; right: 100px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 11px; font-weight: 700; }
+    #btnSaltar.activo { background: var(--accent); color: #223017; }
+
     /* Modal perfil */
     .modal { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px;
       background: rgba(8,10,16,.55); backdrop-filter: blur(6px); opacity: 0; pointer-events: none;
@@ -153,7 +158,7 @@
   </div>
 
   <div class="ayuda glass">
-    <b>Moverse</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <b>Correr</b> <kbd>Shift</kbd><br>
+    <b>Moverse</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <b>Correr</b> <kbd>Shift</kbd> · <b>Saltar</b> <kbd>Space</kbd><br>
     <b>Cámara</b> arrastrar · rueda para zoom · <b>Perfil</b> <kbd>P</kbd>
   </div>
 
@@ -161,6 +166,7 @@
 
   <div id="joy" class="glass"><div class="knob"></div></div>
   <button id="btnCorrer" class="glass" type="button">CORRER</button>
+  <button id="btnSaltar" class="glass" type="button" aria-label="Saltar">SALTAR</button>
 
   <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="tituloPerfil">
     <div class="tarjeta">
@@ -185,6 +191,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="./sheet_personajes.js"></script>
+  <script src="./config_player.js"></script>
+  <script src="./audio_juego.js"></script>
   <script>
   (function () {
     "use strict";
@@ -198,27 +206,22 @@
     const T = window.THREE;
     const { PERSONAJES, crearPersonaje } = window.Catalogo3D;
 
-    // ---------- Configuración del juego ----------
-    const SKINS = ["kitsune", "panda", "merlin", "aura", "alex", 
-                   "nova", "salvia", "akira", "yuki", "atlas", 
-                   "ember", "onyx", "chicle", "menta", "leo", 
-                   "vera", "nico", "alma", "bruno", "roldan", 
+    // ---------- Configuración del jugador (externa y reutilizable) ----------
+    const CFG = window.ConfigPlayer;
+    if (!CFG) {
+      $("cargaTxt").textContent = "Falta config_player.js junto a este archivo.";
+      return;
+    }
+    const ACCIONES = CFG.acciones;
+    const NOMBRES = CFG.nombresHUD;
+
+    // ---------- Skins jugables ----------
+    const SKINS = ["kitsune", "panda", "merlin", "aura", "alex",
+                   "nova", "salvia", "akira", "yuki", "atlas",
+                   "ember", "onyx", "chicle", "menta", "leo",
+                   "vera", "nico", "alma", "bruno", "roldan",
                    "sigrid", "kael", "duna", "ferrum", "boreal", "brasa"]
       .map(id => PERSONAJES.find(p => p.id === id)).filter(Boolean);
-
-    const ACCIONES = [
-      { anim: "Saltar", label: "Saltar", em: "⤒", tecla: "Space", kbd: "␣", tipo: "unica", dur: 1 / 0.85 },
-      { anim: "Atacar (golpe de puño)", label: "Atacar", em: "👊", tecla: "KeyF", kbd: "F", tipo: "unica", dur: Math.PI / 6 },
-      { anim: "Baile 1", label: "Bailar 1", em: "🕺", tecla: "Digit1", kbd: "1", tipo: "emote" },
-      { anim: "Baile 2", label: "Bailar 2", em: "💃", tecla: "Digit2", kbd: "2", tipo: "emote" },
-      { anim: "Baile 3", label: "Bailar 3", em: "🤖", tecla: "Digit3", kbd: "3", tipo: "emote" },
-      { anim: "Dormir", label: "Dormir", em: "💤", tecla: "KeyZ", kbd: "Z", tipo: "emote" }
-    ];
-    const NOMBRES = {
-      "Esperar": "Esperar", "Camina": "Caminando", "Correr": "Corriendo", "Saltar": "Saltando",
-      "Atacar (golpe de puño)": "Atacando", "Baile 1": "Bailando 1", "Baile 2": "Bailando 2",
-      "Baile 3": "Bailando 3", "Dormir": "Durmiendo"
-    };
 
     // ---------- Renderer y escena ----------
     let renderer;
@@ -239,7 +242,7 @@
     const escena = new T.Scene();
     const CIELO = new T.Color("#9fd2f5");
     escena.background = CIELO;
-    escena.fog = new T.Fog(CIELO, 35, 95);
+    escena.fog = new T.Fog(CIELO, 40, 110);
 
     const camara = new T.PerspectiveCamera(50, 1, 0.1, 200);
 
@@ -299,7 +302,7 @@
     malla(new T.TorusGeometry(5.6, 0.35, 6, 40), "#a5a99e", 16, 0.05, -15).rotation.x = Math.PI / 2;
     obstaculos.push({ x: 16, z: -15, r: 5.8 });
 
-    // Árboles de bloques
+    // Árboles de bloques (cantidad reducida a la mitad)
     const gTronco = new T.BoxGeometry(0.5, 1.6, 0.5);
     const gHoja1 = new T.BoxGeometry(2.2, 1.3, 2.2);
     const gHoja2 = new T.BoxGeometry(1.5, 1, 1.5);
@@ -320,7 +323,7 @@
       if (Math.abs(x) < 2.5 || Math.abs(z) < 2.5) return false;
       return obstaculos.every(o => Math.hypot(x - o.x, z - o.z) > o.r + margen);
     }
-    for (let i = 0, n = 0; i < 400 && n < 30; i++) {
+    for (let i = 0, n = 0; i < 400 && n < 40; i++) {
       const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
       if (libre(x, z, 2)) { arbol(x, z, 0.8 + rnd() * 0.6); n++; }
     }
@@ -351,46 +354,43 @@
     }
 
     // Muro perimetral (altura 8) que encierra el mapa
-   (function construirMuro() {
+    (function construirMuro() {
       const ALTO = 8;
       const GROSOR = 1.2;
-      const LADO = LIMITE * 2 + GROSOR;   // cubre el borde exacto del área jugable
+      const LADO = LIMITE * 2 + GROSOR;
       const colorMuro = "#8a8478";
       const colorRemate = "#6f6a60";
 
-    // Cuatro paredes: norte, sur, este, oeste
-   const paredes = [
-     { w: LADO, h: ALTO, d: GROSOR, x: 0, z: -LIMITE - GROSOR / 2 },
-     { w: LADO, h: ALTO, d: GROSOR, x: 0, z:  LIMITE + GROSOR / 2 },
-     { w: GROSOR, h: ALTO, d: LADO, x: -LIMITE - GROSOR / 2, z: 0 },
-     { w: GROSOR, h: ALTO, d: LADO, x:  LIMITE + GROSOR / 2, z: 0 },
-   ];
+      const paredes = [
+        { w: LADO, h: ALTO, d: GROSOR, x: 0, z: -LIMITE - GROSOR / 2 },
+        { w: LADO, h: ALTO, d: GROSOR, x: 0, z:  LIMITE + GROSOR / 2 },
+        { w: GROSOR, h: ALTO, d: LADO, x: -LIMITE - GROSOR / 2, z: 0 },
+        { w: GROSOR, h: ALTO, d: LADO, x:  LIMITE + GROSOR / 2, z: 0 },
+      ];
 
-  for (const p of paredes) {
-    const m = malla(new T.BoxGeometry(p.w, p.h, p.d), colorMuro, p.x, p.h / 2, p.z);
-    m.receiveShadow = true;
+      for (const p of paredes) {
+        const m = malla(new T.BoxGeometry(p.w, p.h, p.d), colorMuro, p.x, p.h / 2, p.z);
+        m.receiveShadow = true;
 
-    // Remate superior (una franja más oscura para dar lectura visual)
-    const remate = malla(
-      new T.BoxGeometry(p.w + 0.15, 0.5, p.d + 0.15),
-      colorRemate, p.x, p.h + 0.25, p.z
-    );
-    remate.castShadow = true;
+        const remate = malla(
+          new T.BoxGeometry(p.w + 0.15, 0.5, p.d + 0.15),
+          colorRemate, p.x, p.h + 0.25, p.z
+        );
+        remate.castShadow = true;
 
-    // Registramos el muro como obstáculo sólido (varios círculos a lo largo)
-    const largo = Math.max(p.w, p.d);
-    const pasos = Math.ceil(largo / 1.5);
-    const esHorizontal = p.w > p.d;
-    for (let i = 0; i <= pasos; i++) {
-      const t = i / pasos - 0.5;
-      obstaculos.push({
-        x: esHorizontal ? p.x + t * p.w : p.x,
-        z: esHorizontal ? p.z : p.z + t * p.d,
-        r: GROSOR * 0.6,
+        const largo = Math.max(p.w, p.d);
+        const pasos = Math.ceil(largo / 1.5);
+        const esHorizontal = p.w > p.d;
+        for (let i = 0; i <= pasos; i++) {
+          const t = i / pasos - 0.5;
+          obstaculos.push({
+            x: esHorizontal ? p.x + t * p.w : p.x,
+            z: esHorizontal ? p.z : p.z + t * p.d,
+            r: GROSOR * 0.6,
           });
         }
-       }
-     })();
+      }
+    })();
 
     // Nubes
     const nubes = [];
@@ -413,8 +413,11 @@
     const jugador = {
       pos: new T.Vector3(0, 0, 8),
       rot: Math.PI,
+      vy: 0,
+      enAire: false,
+      aterrizando: 0,
       modelo: null,
-      ficha: null
+      ficha: null,
     };
 
     function equipar(id, avisar) {
@@ -427,7 +430,7 @@
       jugador.modelo = crearPersonaje(T, ficha);
       jugador.modelo.raiz.traverse(o => { if (o.isMesh) o.castShadow = true; });
       escena.add(jugador.modelo.raiz);
-      localStorage.setItem("cl_skin", ficha.id);
+      localStorage.setItem(CFG.defaults.storageSkin, ficha.id);
       $("hudImg").src = miniaturas.get(ficha.id);
       $("hudSkin").textContent = `${ficha.nombre} · ${ficha.categoria}`;
       document.querySelectorAll(".skin").forEach(b => b.classList.toggle("sel", b.dataset.id === ficha.id));
@@ -477,13 +480,13 @@
       $("skins").appendChild(b);
     }
 
-    const nombreGuardado = localStorage.getItem("cl_nombre") || "Jugador";
+    const nombreGuardado = localStorage.getItem(CFG.defaults.storageNombre) || CFG.defaults.nombre;
     $("nombreJugador").value = nombreGuardado;
     $("hudNombre").textContent = nombreGuardado;
     $("nombreJugador").addEventListener("input", e => {
-      const n = e.target.value.trim() || "Jugador";
+      const n = e.target.value.trim() || CFG.defaults.nombre;
       $("hudNombre").textContent = n;
-      localStorage.setItem("cl_nombre", n);
+      localStorage.setItem(CFG.defaults.storageNombre, n);
     });
 
     function abrirPerfil() { perfilAbierto = true; modal.classList.add("abierto"); teclas.clear(); }
@@ -501,8 +504,8 @@
     }
 
     // ---------- Acciones ----------
-    let unica = null;      // { anim, t, dur }
-    let emote = null;      // nombre de animación en bucle
+    let unica = null;
+    let emote = null;
     const botones = new Map();
 
     function ejecutar(acc) {
@@ -525,6 +528,14 @@
       $("acciones").appendChild(b);
     }
 
+    // ---------- Salto físico ----------
+    function intentarSalto() {
+      if (jugador.enAire) return;
+      jugador.vy = CFG.salto.impulso;
+      jugador.enAire = true;
+      if (window.AudioJuego && AudioJuego.listo) AudioJuego.salto();
+    }
+
     // ---------- Entrada: teclado ----------
     const teclas = new Set();
     addEventListener("keydown", e => {
@@ -533,7 +544,14 @@
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
       teclas.add(e.code);
       if (e.repeat) return;
-      if (e.code === "KeyP") { abrirPerfil(); return; }
+
+      // Salto físico
+      if (e.code === CFG.teclas.saltar) { intentarSalto(); return; }
+
+      // Perfil
+      if (e.code === CFG.teclas.perfil) { abrirPerfil(); return; }
+
+      // Acciones de barra
       const acc = ACCIONES.find(a => a.tecla === e.code);
       if (acc) ejecutar(acc);
     });
@@ -562,6 +580,9 @@
       $("btnCorrer").classList.toggle("activo", correrMovil);
     });
 
+    // ---------- Botón físico Saltar ----------
+    $("btnSaltar").addEventListener("click", () => intentarSalto());
+
     // ---------- Cámara orbital ----------
     let yaw = 0, pitch = 0.42, dist = 9;
     let arrastre = null;
@@ -581,7 +602,7 @@
 
     const foco = new T.Vector3();
     function actualizarCamara(dt) {
-      const objetivo = new T.Vector3(jugador.pos.x, 1.5, jugador.pos.z);
+      const objetivo = new T.Vector3(jugador.pos.x, 1.5 + jugador.pos.y, jugador.pos.z);
       foco.lerp(objetivo, 1 - Math.exp(-dt * 10));
       camara.position.set(
         foco.x + Math.sin(yaw) * Math.cos(pitch) * dist,
@@ -600,7 +621,7 @@
     redimensionar();
 
     // ---------- Bucle principal ----------
-    let animActual = "", tAnim = 0, reloj = 0;
+    let animActual = "", tAnim = 0, reloj = 0, pasoAcum = 0;
 
     function colisiones(p) {
       const R = 0.6;
@@ -614,6 +635,8 @@
 
     function actualizar(dt) {
       reloj += dt;
+
+      // --- Input ---
       let ix = 0, iz = 0;
       if (teclas.has("KeyW") || teclas.has("ArrowUp")) iz += 1;
       if (teclas.has("KeyS") || teclas.has("ArrowDown")) iz -= 1;
@@ -623,28 +646,61 @@
       const mag = Math.hypot(ix, iz);
       if (mag > 1) { ix /= mag; iz /= mag; }
       const moviendo = mag > 0.12;
-      const corriendo = moviendo && (teclas.has("ShiftLeft") || teclas.has("ShiftRight") || correrMovil);
+      const corriendo = moviendo && (
+        teclas.has("ShiftLeft") || teclas.has("ShiftRight") || correrMovil
+      );
 
       if (moviendo && emote) emote = null;
 
+      // --- Movimiento horizontal ---
       if (moviendo) {
         const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
         const rx = Math.cos(yaw), rz = -Math.sin(yaw);
         let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
         const l = Math.hypot(mx, mz); mx /= l; mz /= l;
-        let vel = corriendo ? 7 : 3.2;
-        if (unica && unica.anim !== "Saltar") vel *= 0.25;
+
+        let vel = corriendo ? CFG.movimiento.velocidadCorrer : CFG.movimiento.velocidadCaminar;
+        if (unica && unica.anim !== CFG.salto.animacionSalto) vel *= CFG.movimiento.factorAlAtacar;
+
         const k = Math.min(1, Math.hypot(ix, iz));
         jugador.pos.x += mx * vel * k * dt;
         jugador.pos.z += mz * vel * k * dt;
         colisiones(jugador.pos);
+
         const objetivo = Math.atan2(mx, mz);
         const d = Math.atan2(Math.sin(objetivo - jugador.rot), Math.cos(objetivo - jugador.rot));
         jugador.rot += d * Math.min(1, dt * 12);
       }
 
+      // --- Física vertical ---
+      if (jugador.enAire || jugador.vy !== 0) {
+        jugador.vy += CFG.salto.gravedad * dt;
+        jugador.pos.y += jugador.vy * dt;
+        if (jugador.pos.y <= 0) {
+          const impacto = Math.abs(jugador.vy);
+          jugador.pos.y = 0;
+          jugador.vy = 0;
+          if (jugador.enAire) {
+            jugador.enAire = false;
+            jugador.aterrizando = CFG.salto.duracionAterrizaje;
+            if (window.AudioJuego && AudioJuego.listo) AudioJuego.aterrizaje(impacto);
+          }
+        }
+      }
+
+      // --- Temporizador de aterrizaje ---
+      if (jugador.aterrizando > 0) {
+        jugador.aterrizando -= dt;
+        if (jugador.aterrizando < 0) jugador.aterrizando = 0;
+      }
+
+      // --- Selección de animación ---
       let anim;
-      if (unica) {
+      if (jugador.aterrizando > 0) {
+        anim = CFG.salto.animacionAterrizaje;
+      } else if (jugador.enAire) {
+        anim = CFG.salto.animacionSalto;
+      } else if (unica) {
         unica.t += dt;
         if (unica.t >= unica.dur) unica = null;
         else anim = unica.anim;
@@ -660,9 +716,27 @@
       const m = jugador.modelo;
       m.raiz.position.copy(jugador.pos);
       m.raiz.rotation.y = jugador.rot;
-      m.animar(unica ? unica.t : tAnim, anim);
 
-      // Mundo vivo
+      // La animación "Aterrizaje" todavía no existe en sheet_personajes.js:
+      // se usa "Saltar" como aproximación hasta que se añada.
+      const animParaModelo =
+        anim === CFG.salto.animacionAterrizaje ? CFG.salto.animacionSalto : anim;
+      m.animar(unica ? unica.t : tAnim, animParaModelo);
+
+      // --- Sonido de pasos ---
+      if (moviendo && !jugador.enAire && jugador.aterrizando === 0 &&
+          window.AudioJuego && AudioJuego.listo) {
+        const ritmo = corriendo ? CFG.sonidos.paso.ritmoCorrer : CFG.sonidos.paso.ritmoCaminar;
+        pasoAcum += dt;
+        if (pasoAcum >= ritmo) {
+          pasoAcum = 0;
+          AudioJuego.paso({ corriendo });
+        }
+      } else {
+        pasoAcum = 0;
+      }
+
+      // --- Mundo vivo ---
       cristal.rotation.y += dt * 1.2;
       cristal.position.y = 3.2 + Math.sin(reloj * 2) * 0.2;
       aro.material.emissiveIntensity = 0.4 + Math.sin(reloj * 2.5) * 0.25;
@@ -677,8 +751,13 @@
     }
 
     // ---------- Inicio ----------
-    equipar(localStorage.getItem("cl_skin") || "panda", false);
+    equipar(localStorage.getItem(CFG.defaults.storageSkin) || CFG.defaults.skin, false);
     foco.set(jugador.pos.x, 1.5, jugador.pos.z);
+
+    // Audio del jugador: precarga buffers por código (no bloquea el arranque visual)
+    if (window.AudioJuego) {
+      AudioJuego.init(CFG).catch(err => console.warn("Audio del jugador no disponible:", err));
+    }
 
     let anterior = performance.now();
     function bucle(ahora) {
