@@ -70,6 +70,36 @@
       label: "ATACAR",
     },
 
+        // ---------------------------------------------------------------
+    // Cajas del mapa
+    // ---------------------------------------------------------------
+    cajas: {
+      tipos: {
+        chica:   { tam: 0.6, color: "#c8925a", marco: "#8a5a32", agarrable: true,  factorVel: 1.0 },
+        mediana: { tam: 0.9, color: "#b07a45", marco: "#6f4626", agarrable: true,  factorVel: 0.85 },
+        grande:  { tam: 1.5, color: "#8f6a4a", marco: "#4f3a2a", agarrable: false },
+      },
+      // [tipo, x, z]
+      ubicaciones: [
+        ["chica",   3.5,  7.5],
+        ["chica",  -4.0, 10.0],
+        ["mediana", 8.0,  5.0],
+        ["mediana",-8.5,  4.5],
+        ["mediana", 6.0, -9.0],
+        ["grande", -10.0, -9.0],
+        ["grande",  11.0, 11.0],
+      ],
+      distanciaAgarre: 1.3,   // distancia máx. desde el borde de la caja
+      distanciaLanzar: 3,     // unidades desde el jugador hasta donde cae
+      impulsoLanzarY: 4.5,
+      alturaCarga: 1.45,      // altura del centro de la caja al cargarla
+      gravedad: -22,
+    },
+
+    botonAgarrar: { label: "AGARRAR", labelSoltar: "SOLTAR" },
+    botonLanzar:  { label: "LANZAR" },
+
+
     // ---------------------------------------------------------------
     // Estados → nombre de animación en el catálogo 3D
     // ---------------------------------------------------------------
@@ -114,6 +144,9 @@
       abajo:  ["KeyS", "ArrowDown"],
       izquierda: ["KeyA", "ArrowLeft"],
       derecha: ["KeyD", "ArrowRight"],
+      agarrar: "KeyE",
+      lanzar: "KeyR",
+
     },
 
     // ---------------------------------------------------------------
