@@ -36,15 +36,21 @@
     // ---------------------------------------------------------------
     // Física del salto
     // ---------------------------------------------------------------
-    salto: {
-      impulso: 7.0,            // velocidad vertical inicial (u/s)
-      gravedad: -22.0,         // aceleración vertical (u/s²)
+        salto: {
+      impulso: 9.6,            // antes 7.0 → altura ≈ 2.1 (antes ≈ 1.1), +1 unidad
+      gravedad: -22.0,         // gravedad al subir
+      gravedadCaida: -15.0,    // gravedad al bajar (más suave = aterrizaje natural)
+      velocidadMaxCaida: -11.0,// límite de velocidad al caer
+      umbralApice: 1.5,        // |vy| por debajo del cual se "flota" en el punto alto
+      factorApice: 0.6,        // gravedad reducida en el punto alto
       permiteDobleSalto: false,
-      coyoteTime: 0,           // reservado para futuro
+      coyoteTime: 0,
       animacionSalto: "Saltar",
-      animacionAterrizaje: "Aterrizaje", // nueva, breve
-      duracionAterrizaje: 0.20,          // s
-      umbralAterrizajeFuerte: 6.0,       // |vy| para sonido fuerte
+      animacionAterrizaje: "Aterrizaje",
+      duracionAterrizaje: 0.22,          // s de amortiguación visual al tocar suelo
+      umbralAterrizajeFuerte: 6.0,
+    },
+
     },
 
     // ---------------------------------------------------------------
@@ -53,8 +59,14 @@
     movimiento: {
       velocidadCaminar: 3.2,
       velocidadCorrer: 7.0,
-      factorAlAtacar: 0.25,    // multiplicador de velocidad durante acción "unica"
+      factorAlAtacar: 0.7,    // multiplicador de velocidad durante acción "unica"
     },
+    // ---------------------------------------------------
+    // Config nuevo botón
+      botonAtacar: {
+        icono: "👊",
+        label: "ATACAR",
+      },
 
     // ---------------------------------------------------------------
     // Estados → nombre de animación en el catálogo 3D
