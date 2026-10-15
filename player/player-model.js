@@ -74,7 +74,7 @@ export function createPlayerModel({ THREE: T, colors }) {
   }
 
   /* --- Cuerpo (adaptado del catálogo) --- */
-  const cuerpo = grupo(raiz, 0, 1.12, 0);
+  const cuerpo = grupo(raiz, 0, 0, 0);
   const torso = grupo(cuerpo);
 
   caja(torso, 0.91, 0.86, 0.48, col.ropa, 0, 0.43, 0, false, 'ropa');
@@ -107,8 +107,8 @@ export function createPlayerModel({ THREE: T, colors }) {
     caja(brazo, 0.29, 0.25, 0.34, col.piel, 0, -0.58, 0, false, 'piel');
   }
 
-  const legL = grupo(cuerpo, -0.25, 0, 0);
-  const legR = grupo(cuerpo, 0.25, 0, 0);
+  const legL = grupo(cuerpo, -0.25, 0.765, 0);
+  const legR = grupo(cuerpo, 0.25, 0.765, 0);
   for (const pierna of [legL, legR]) {
     caja(pierna, 0.38, 0.75, 0.40, col.pantalon, 0, -0.39, 0, false, 'pantalon');
     caja(pierna, 0.40, 0.23, 0.60, '#edf0f4', 0, -0.88, 0.09);
