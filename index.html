@@ -1,732 +1,986 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#11152d">
-<title>Una aventura para celebrar</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Una aventura de cumpleaños</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@500;700;800;900&display=swap');
 
-:root {
-  --ink: #202044;
-  --violet: #7656ff;
-  --mint: #baffdf;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  overflow: hidden;
-  background: #c8c5ed;
-  font-family: 'Outfit', system-ui, sans-serif;
-  color: white;
-}
-button, a { -webkit-tap-highlight-color: transparent; }
-button { font: inherit; cursor: pointer; }
-button:focus-visible, a:focus-visible {
-  outline: 3px solid #57e7c1;
-  outline-offset: 5px;
-}
-canvas { display: block; touch-action: none; }
-#world { position: fixed; inset: 0; }
-.hud {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  padding: max(24px, env(safe-area-inset-top)) 28px;
-}
-.top { display: flex; justify-content: space-between; gap: 20px; }
-.brand {
-  color: var(--ink);
-  font-weight: 900;
-  font-size: 21px;
-  letter-spacing: -1px;
-}
-.brand small {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 3px;
-  margin-top: 5px;
-  opacity: .65;
-}
-.pill, .mission {
-  background: rgba(255,255,255,.73);
-  border: 1px solid rgba(255,255,255,.8);
-  box-shadow: 0 12px 40px #44407315;
-  backdrop-filter: blur(18px);
-  color: var(--ink);
-}
-.pill {
-  border-radius: 30px;
-  padding: 12px 18px;
-  font-size: 12px;
-  font-weight: 700;
-  align-self: flex-start;
-}
-.pill::before {
-  content: '';
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  background: #30bb86;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-.mission {
-  position: absolute;
-  top: 108px;
-  left: 28px;
-  width: 270px;
-  padding: 20px;
-  border-radius: 22px;
-}
-.eyebrow {
-  font-size: 10px;
-  letter-spacing: 2.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-.mission h2 { font-size: 21px; margin: 8px 0; letter-spacing: -.6px; }
-.mission p { font-size: 13px; line-height: 1.5; opacity: .7; margin: 0; }
-.progress { display: flex; gap: 6px; margin-top: 16px; }
-.progress span {
-  height: 6px;
-  background: #ddd9ee;
-  border-radius: 6px;
-  flex: 1;
-  transition: background .25s, box-shadow .25s;
-}
-.progress span.on { background: var(--violet); box-shadow: 0 0 12px #7656ff55; }
-#hint {
-  position: absolute;
-  bottom: 118px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #202044e8;
-  backdrop-filter: blur(12px);
-  padding: 13px 20px;
-  border-radius: 16px;
-  font-size: 13px;
-  text-align: center;
-  width: max-content;
-  max-width: 85vw;
-}
-.controls {
-  position: fixed;
-  bottom: max(26px, env(safe-area-inset-bottom));
-  left: 28px;
-  color: #292445;
-  font-size: 12px;
-}
-kbd {
-  font: inherit;
-  background: #ffffffb5;
-  border: 1px solid white;
-  padding: 6px 9px;
-  border-radius: 7px;
-}
-#hit {
-  position: fixed;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  right: 28px;
-  border: 1px solid #ffffff60;
-  border-radius: 22px;
-  padding: 18px 26px;
-  color: white;
-  background: var(--violet);
-  box-shadow: 0 10px 28px #7656ff45, inset 0 2px #ffffff30;
-  font-weight: 800;
-  transition: transform .15s, opacity .2s;
-}
-#hit:active { transform: scale(.94); }
-#hit:disabled { opacity: .45; cursor: default; }
-#pad {
-  position: fixed;
-  left: 20px;
-  bottom: max(24px, env(safe-area-inset-bottom));
-  display: none;
-  grid-template-columns: repeat(3, 44px);
-  grid-template-rows: repeat(2, 44px);
-  gap: 5px;
-}
-#pad button {
-  border: 1px solid white;
-  background: #ffffffbb;
-  backdrop-filter: blur(12px);
-  border-radius: 14px;
-  color: var(--ink);
-  font-size: 20px;
-  touch-action: none;
-  user-select: none;
-}
-#pad button:active { background: var(--mint); }
-#pad [data-key="ArrowUp"] { grid-column: 2; }
-#pad [data-key="ArrowLeft"] { grid-column: 1; grid-row: 2; }
-#pad [data-key="ArrowDown"] { grid-column: 2; grid-row: 2; }
-#pad [data-key="ArrowRight"] { grid-column: 3; grid-row: 2; }
+    :root {
+      --ink: #25234d;
+      --pink: #ff4e99;
+      --yellow: #ffe176;
+      --purple: #7657ed;
+    }
 
-#overlay {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: #17132d65;
-  backdrop-filter: blur(14px);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity .5s, visibility .5s;
-  overflow-y: auto;
-}
-#overlay.open { opacity: 1; visibility: visible; }
-.card {
-  position: relative;
-  width: min(100%, 440px);
-  background: #fffdf8;
-  color: var(--ink);
-  border-radius: 32px;
-  padding: 38px 30px 26px;
-  text-align: center;
-  border: 1px solid white;
-  box-shadow: 0 35px 100px #17132d55;
-  transform: translateY(45px) rotateX(12deg) scale(.92);
-  transition: transform .65s cubic-bezier(.2,.8,.2,1);
-  overflow: hidden;
-}
-.open .card { transform: none; }
-.card::before {
-  content: '';
-  position: absolute;
-  height: 8px;
-  inset: 0 0 auto;
-  background: linear-gradient(90deg, #a18aff, #ffafd4, #ffe7a0, #a8f0d5);
-}
-.stamp {
-  display: grid;
-  place-items: center;
-  width: 70px;
-  height: 70px;
-  margin: 0 auto 20px;
-  border-radius: 23px;
-  background: #ece5ff;
-  font-size: 34px;
-  transform: rotate(-8deg);
-}
-.card .eyebrow { color: #8871c1; }
-.card h1 {
-  font-size: clamp(38px, 8vw, 56px);
-  line-height: 1;
-  letter-spacing: -2px;
-  margin: 16px 0 12px;
-}
-.card .intro { font-size: 15px; color: #77718a; line-height: 1.5; }
-.details {
-  margin: 24px 0;
-  padding: 20px;
-  background: #f3effa;
-  border: 1px solid #e8e1f3;
-  border-radius: 20px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
-.details small {
-  display: block;
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  color: #8b7ca1;
-  margin-bottom: 6px;
-}
-.details strong { font-size: 15px; }
-.place { grid-column: 1 / -1; }
-.cta {
-  display: block;
-  text-decoration: none;
-  border: none;
-  width: 100%;
-  border-radius: 16px;
-  padding: 17px;
-  background: var(--violet);
-  color: white;
-  font-weight: 700;
-  box-shadow: 0 8px 20px #7656ff30;
-}
-#replay {
-  border: none;
-  background: transparent;
-  color: #90859f;
-  margin-top: 17px;
-  font-size: 12px;
-  padding: 7px;
-}
-#loader {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  text-align: center;
-  background: #f1edff;
-  color: var(--ink);
-  z-index: 20;
-}
-#loader b { font-size: 24px; }
-#loader p { font-size: 14px; color: #82739f; max-width: 300px; line-height: 1.5; }
-@media (pointer: coarse) {
-  #pad { display: grid; }
-  .controls { display: none; }
-}
-@media (max-width: 600px) {
-  .hud { padding: 20px; }
-  .brand { font-size: 18px; }
-  .pill { font-size: 10px; padding: 10px 12px; }
-  .mission { left: 20px; top: 87px; width: 220px; padding: 15px; }
-  .mission h2 { font-size: 18px; }
-  .mission p { font-size: 12px; }
-  #hit { right: 20px; padding: 18px 20px; }
-  #hint { bottom: 135px; font-size: 12px; }
-  .card { padding: 28px 24px 20px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before { transition: none !important; }
-}
-</style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      color: var(--ink);
+      background: #ace4ff;
+      font-family: "Nunito", sans-serif;
+      touch-action: none;
+    }
+
+    button, a { -webkit-tap-highlight-color: transparent; }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: 0;
+    }
+
+    button:focus-visible, a:focus-visible {
+      outline: 4px solid #ffb800;
+      outline-offset: 5px;
+    }
+
+    #world { position: fixed; inset: 0; }
+    #world canvas { display: block; }
+
+    .hud {
+      position: fixed;
+      top: max(20px, env(safe-area-inset-top));
+      left: 20px;
+      right: 20px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .mission {
+      background: #ffffffed;
+      border: 2px solid white;
+      border-radius: 24px;
+      padding: 16px 22px;
+      box-shadow: 0 10px 35px #44357518;
+      max-width: 360px;
+    }
+
+    .eyebrow {
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--purple);
+    }
+
+    .mission h1 {
+      font-family: "Fredoka", sans-serif;
+      font-weight: 600;
+      font-size: 23px;
+      margin: 5px 0;
+    }
+
+    .mission p {
+      font-size: 13px;
+      margin: 0;
+      color: #77718d;
+    }
+
+    .dots { display: flex; gap: 7px; margin-top: 12px; }
+
+    .dot {
+      width: 31px;
+      height: 9px;
+      background: #e9e4f7;
+      border-radius: 10px;
+      transition: background .2s, transform .2s;
+    }
+
+    .dot.on { background: var(--pink); transform: scaleY(1.2); }
+
+    #sound {
+      pointer-events: auto;
+      background: #fff;
+      border-radius: 17px;
+      width: 48px;
+      height: 48px;
+      box-shadow: 0 8px 24px #44357518;
+      font-size: 20px;
+    }
+
+    #hint {
+      position: fixed;
+      left: 50%;
+      bottom: 32px;
+      transform: translateX(-50%);
+      border-radius: 30px;
+      padding: 12px 22px;
+      background: #292348db;
+      color: white;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      pointer-events: none;
+      z-index: 2;
+      max-width: calc(100% - 40px);
+      width: max-content;
+    }
+
+    #hit {
+      position: fixed;
+      bottom: max(40px, env(safe-area-inset-bottom));
+      right: 30px;
+      width: 115px;
+      height: 115px;
+      border-radius: 50%;
+      background: var(--pink);
+      color: white;
+      font-weight: 900;
+      font-size: 15px;
+      border: 6px solid #ffffffb3;
+      box-shadow: 0 8px 0 #bd3674, 0 14px 35px #ab327b35;
+      display: none;
+      z-index: 3;
+      transition: transform .12s;
+    }
+
+    #hit:active { transform: translateY(5px) scale(.96); }
+    #hit span { display: block; font-size: 32px; margin-bottom: 3px; }
+
+    #joystick {
+      position: fixed;
+      left: 25px;
+      bottom: max(40px, env(safe-area-inset-bottom));
+      width: 122px;
+      height: 122px;
+      border-radius: 50%;
+      background: #ffffff55;
+      border: 3px solid #ffffffa8;
+      display: none;
+      z-index: 3;
+      touch-action: none;
+    }
+
+    #stick {
+      position: absolute;
+      left: 34px;
+      top: 34px;
+      width: 48px;
+      height: 48px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: 0 5px 15px #423a6625;
+      pointer-events: none;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 22px;
+      background: #4b3c7955;
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .panel {
+      width: min(460px, 100%);
+      background: #fffdf9;
+      padding: 38px 30px;
+      border-radius: 34px;
+      border: 5px solid white;
+      text-align: center;
+      box-shadow: 0 25px 90px #32224d40;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      width: 210px;
+      height: 210px;
+      border-radius: 50%;
+      background: #ffe17655;
+      top: -120px;
+      right: -65px;
+      pointer-events: none;
+    }
+
+    .hero-icon { font-size: 64px; margin-bottom: 14px; }
+
+    .panel h2 {
+      font-family: "Fredoka", sans-serif;
+      font-size: clamp(32px, 6vw, 44px);
+      line-height: 1.05;
+      font-weight: 600;
+      margin: 12px 0 16px;
+      letter-spacing: -.7px;
+    }
+
+    .panel p { color: #79728b; line-height: 1.65; }
+
+    .primary {
+      display: block;
+      background: var(--purple);
+      color: white;
+      padding: 17px 22px;
+      border-radius: 18px;
+      width: 100%;
+      font-size: 16px;
+      font-weight: 900;
+      box-shadow: 0 6px 0 #5940ba;
+      text-decoration: none;
+      margin-top: 23px;
+    }
+
+    .secondary {
+      margin-top: 20px;
+      background: transparent;
+      color: #817897;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    #invite { display: none; }
+
+    #invite .panel {
+      animation: reveal .6s cubic-bezier(.2, 1.3, .4, 1);
+      max-height: 92dvh;
+      overflow-y: auto;
+      touch-action: pan-y;
+    }
+
+    .age {
+      display: inline-block;
+      border-radius: 14px;
+      background: var(--yellow);
+      padding: 8px 18px;
+      font-family: "Fredoka", sans-serif;
+      font-size: 24px;
+      transform: rotate(-4deg);
+    }
+
+    .details {
+      text-align: left;
+      display: grid;
+      gap: 12px;
+      margin-top: 25px;
+      padding: 19px;
+      border-radius: 20px;
+      background: #f2eefc;
+      font-size: 14px;
+    }
+
+    .details div { display: flex; gap: 12px; align-items: center; }
+    .details span:first-child { font-size: 22px; }
+    .details strong { display: block; color: var(--purple); font-size: 11px; }
+    #reopen { display: none; }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(45px) scale(.75) rotate(-5deg); }
+      to { opacity: 1; transform: none; }
+    }
+
+    @media (pointer: coarse) {
+      #joystick { display: block; }
+      #hint { bottom: 188px; font-size: 12px; }
+    }
+
+    @media (max-width: 600px) {
+      .hud { top: 12px; left: 12px; right: 12px; }
+      .mission { padding: 13px 16px; max-width: calc(100% - 55px); }
+      .mission h1 { font-size: 19px; }
+      .mission p { font-size: 11px; }
+      #hit { width: 98px; height: 98px; right: 22px; }
+      .panel { padding: 28px 22px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before { animation: none !important; transition: none !important; }
+    }
+  </style>
 </head>
 <body>
-<div id="world"></div>
+  <div id="world"></div>
 
-<div class="hud">
-  <div class="top">
-    <div class="brand">UN DIA MUY ESPECIAL<small>TE ESPERO</small></div>
-    <div class="pill">MUNDO DE CUMPLEAÑOS</div>
+  <header class="hud">
+    <section class="mission">
+      <div class="eyebrow">Birthday adventure</div>
+      <h1 id="missionTitle">Encuentra la sorpresa</h1>
+      <p id="missionText">Hay un regalo gigante esperando por ti.</p>
+      <div class="dots" aria-label="Golpes al regalo">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </section>
+    <button id="sound" aria-label="Silenciar sonidos">🔊</button>
+  </header>
+
+  <div id="hint" role="status" aria-live="polite">
+    WASD o flechas para caminar · Espacio para golpear
   </div>
-  <section class="mission">
-    <div class="eyebrow">Tu misión</div>
-    <h2 id="missionTitle">Encuentra la sorpresa</h2>
-    <p id="missionText">Sigue el camino y descubre qué esconde el gran regalo.</p>
-    <div class="progress" aria-label="Golpes al regalo">
-      <span></span><span></span><span></span>
+
+  <div id="joystick" role="group" aria-label="Control táctil para caminar">
+    <div id="stick"></div>
+  </div>
+
+  <button id="hit" aria-label="Golpear regalo">
+    <span>👊</span>¡GOLPEA!
+  </button>
+
+  <section id="welcome" class="overlay">
+    <div class="panel">
+      <div class="hero-icon">🎮</div>
+      <div class="eyebrow">Una misión muy especial</div>
+      <h2>Una sorpresa.<br>¡Una gran aventura!</h2>
+      <p>Explora esta pequeña isla, encuentra el regalo gigante
+        y dale <b>3 golpes</b> para descubrir tu invitación.</p>
+      <button class="primary" id="start">¡Vamos a jugar! ✨</button>
+      <p style="font-size:11px;margin-bottom:0">
+        Activa el sonido para disfrutar la aventura
+      </p>
     </div>
   </section>
-  <div id="hint" role="status" aria-live="polite">¡Tu aventura empieza aquí!</div>
-</div>
 
-<div class="controls"><kbd>W A S D</kbd> o flechas para moverte · <kbd>Espacio</kbd> golpear</div>
-<div id="pad" aria-label="Movimiento">
-  <button data-key="ArrowUp" aria-label="Avanzar">↑</button>
-  <button data-key="ArrowLeft" aria-label="Izquierda">←</button>
-  <button data-key="ArrowDown" aria-label="Retroceder">↓</button>
-  <button data-key="ArrowRight" aria-label="Derecha">→</button>
-</div>
-<button id="hit" disabled>ROMPER ✦</button>
+  <section id="invite" class="overlay" role="dialog"
+           aria-modal="true" aria-labelledby="inviteTitle">
+    <div class="panel">
+      <div class="eyebrow">¡Misión completada!</div>
+      <div class="hero-icon" style="margin:12px 0">🎉</div>
+      <div class="age" id="age"></div>
+      <h2 id="inviteTitle"></h2>
+      <p>¡Estás invitado a una fiesta llena de juegos,
+        risas y aventuras!</p>
 
-<div id="overlay" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
-  <article class="card">
-    <div class="stamp">🎂</div>
-    <div class="eyebrow">Sorpresa desbloqueada</div>
-    <h1 id="inviteTitle"></h1>
-    <p class="intro" id="inviteIntro"></p>
-    <div class="details">
-      <div><small>CUÁNDO</small><strong id="date"></strong></div>
-      <div><small>HORA</small><strong id="time"></strong></div>
-      <div class="place"><small>DÓNDE</small><strong id="place"></strong></div>
+      <div class="details">
+        <div><span>📅</span><div><strong>DÍA</strong><span id="date"></span></div></div>
+        <div><span>⏰</span><div><strong>HORA</strong><span id="time"></span></div></div>
+        <div><span>📍</span><div><strong>LUGAR</strong><span id="place"></span></div></div>
+      </div>
+
+      <a class="primary" id="rsvp" target="_blank" rel="noopener">
+        ¡Voy a la aventura! 💜
+      </a>
+      <button class="secondary" id="back">Seguir explorando</button>
     </div>
-    <a class="cta" id="rsvp" target="_blank" rel="noopener noreferrer">Confirmar asistencia ↗</a>
-    <button id="replay">Volver a explorar</button>
-  </article>
-</div>
+  </section>
 
-<div id="loader"><b>Construyendo la aventura...</b><p>Preparando una sorpresa para ti.</p></div>
+  <button id="reopen" class="primary"
+          style="position:fixed;bottom:25px;left:50%;transform:translateX(-50%);width:auto;z-index:4">
+    🎉 Ver invitación
+  </button>
 
-<script type="module">
-// PERSONALIZA ESTOS DATOS.
-// El teléfono debe incluir código de país, sin "+" ni espacios.
-// Si lo dejas vacío, el botón permite descargar la invitación.
-const EVENTO = {
-  nombre: "Alex",
-  edad: 10,
-  fecha: "24 de octubre",
-  hora: "17:00 h",
-  lugar: "Salón Arcoíris",
-  direccion: "Calle de la Alegría 123",
-  telefono: "+5491150423844"
-};
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 
-const $ = id => document.getElementById(id);
-$("inviteTitle").textContent = `¡${EVENTO.nombre} cumple ${EVENTO.edad}!`;
-$("inviteIntro").textContent = "Superaste la misión. Ahora viene lo mejor: ¡celebrar juntos!";
-$("date").textContent = EVENTO.fecha;
-$("time").textContent = EVENTO.hora;
-$("place").textContent = `${EVENTO.lugar} · ${EVENTO.direccion}`;
+    // PERSONALIZA ESTOS DATOS
+    const CONFIG = {
+      nombre: "MATEO",
+      edad: 7,
+      fecha: "Sábado 21 de noviembre",
+      hora: "16:00 a 19:00",
+      lugar: "Salón Arcoíris · Calle Aventura 123",
+      // Número internacional, solo dígitos. Vacío oculta la confirmación.
+      whatsapp: "",
+      mensaje: "¡Hola! Confirmo mi asistencia al cumpleaños de Mateo.",
+      volumenPisadas: 0.30,
+      volumenApertura: 0.50
+    };
 
-if (EVENTO.telefono) {
-  const mensaje = `¡Hola! Confirmo mi asistencia al cumpleaños de ${EVENTO.nombre}.`;
-  //$("rsvp").href = `https://wa.me/${EVENTO.telefono.replace(/\D/g) ""}?text=${encodeURIComponent(mensaje)}`;
-  $("rsvp").href = `https://wa.me/${EVENTO.telefono.replace(/\D/g, "")}?text=${encodeURIComponent(mensaje)}`;
-  
-} else {
-  const texto = `¡${EVENTO.nombre} cumple ${EVENTO.edad}!\n${EVENTO.fecha} · ${EVENTO.hora}\n${EVENTO.lugar}\n${EVENTO.direccion}`;
-  $("rsvp").href = URL.createObjectURL(new Blob([texto], { type: "text/plain;charset=utf-8" }));
-  $("rsvp").download = "invitacion.txt";
-  $("rsvp").removeAttribute("target");
-  $("rsvp").textContent = "Guardar invitación ↓";
-}
+    const $ = id => document.getElementById(id);
+    const coarse = matchMedia("(pointer: coarse)").matches;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-try {
-  const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
-  iniciar(THREE);
-} catch (error) {
-  $("loader").innerHTML = "<b>No pudimos abrir el mundo</b><p>Comprueba tu conexión y recarga la página. Este juego necesita un navegador compatible con WebGL.</p>";
-  console.error(error);
-}
+    $("age").textContent = `¡Cumplo ${CONFIG.edad}!`;
+    $("inviteTitle").textContent = `¡${CONFIG.nombre} te invita!`;
+    $("date").textContent = CONFIG.fecha;
+    $("time").textContent = CONFIG.hora;
+    $("place").textContent = CONFIG.lugar;
 
-function iniciar(T) {
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const scene = new T.Scene();
-  scene.background = new T.Color("#a9a3e8");
-  scene.fog = new T.Fog("#a9a3e8", 22, 52);
+    if (CONFIG.whatsapp) {
+      $("rsvp").href = `(https://wa.me/${CONFIG.whatsapp.replace(/\D/g) "")}?text=${encodeURIComponent(CONFIG.mensaje)}`;
+    } else {
+      $("rsvp").style.display = "none";
+    }
 
-  const camera = new T.PerspectiveCamera(43, innerWidth / innerHeight, .1, 100);
-  const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = T.PCFSoftShadowMap;
-  renderer.outputColorSpace = T.SRGBColorSpace;
-  renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;         // antes 1.2
-  $("world").appendChild(renderer.domElement);
+    // AUDIO: buses independientes con los volúmenes solicitados.
+    let audio, footstepsBus, openingBus, effectsBus, master;
+    let muted = false;
 
-  scene.add(new T.HemisphereLight("#ffffff", "#5a4a8f", 2.2));  // antes #fff4ef / #74659b
-  const sun = new T.DirectionalLight("#fff3e0", 3.0);           // antes 3.4
-  sun.position.set(-8, 16, 8);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, far: 45 });
-  sun.shadow.normalBias = .04;
-  scene.add(sun);
+    function initAudio() {
+      if (!audio) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        audio = new AudioCtx();
+        master = audio.createGain();
+        master.connect(audio.destination);
 
-  const materials = new Map();
-  function mat(color) {
-    if (!materials.has(color)) materials.set(color, new T.MeshStandardMaterial({ color, roughness: .72 }));
-    return materials.get(color);
-  }
-  const boxGeo = new T.BoxGeometry(1, 1, 1);
-  function box(parent, size, pos, color) {
-    const m = new T.Mesh(boxGeo, mat(color));
-    m.scale.set(...size);
-    m.position.set(...pos);
-    m.castShadow = m.receiveShadow = true;
-    parent.add(m);
-    return m;
-  }
-  function ball(parent, radius, pos, color) {
-    const m = new T.Mesh(new T.IcosahedronGeometry(radius, 1), mat(color));
-    m.position.set(...pos);
-    m.castShadow = true;
-    parent.add(m);
-    return m;
-  }
+        footstepsBus = audio.createGain();
+        footstepsBus.gain.value = CONFIG.volumenPisadas;
+        footstepsBus.connect(master);
 
-  // Isla flotante.
-box(scene, [18, 1, 16], [0, -.55, 0], "#7d6bbf");      // antes #a99bd3
-box(scene, [18.2, .32, 16.2], [0, .02, 0], "#6fbf86"); // antes #a3d9b3
-box(scene, [15, 1.1, 13], [0, -1.5, 0], "#6a5aa3");    // antes #9385bd
-box(scene, [10, 1.2, 9], [0, -2.5, 0], "#584a92");     // antes #8273ae
+        openingBus = audio.createGain();
+        openingBus.gain.value = CONFIG.volumenApertura;
+        openingBus.connect(master);
 
-  // Camino y plataforma.
-  for (let i = 0; i < 8; i++) {
-    const tile = box(scene, [2.3, .13, .85], [Math.sin(i * .55) * .4, .23, 5.8 - i * 1.2], "#ffe0a8");
-    tile.rotation.y = Math.sin(i) * .09;
-  }
-  const pedestal = new T.Mesh(new T.CylinderGeometry(2.55, 2.7, .32, 48), mat("#d9c6ff"));
-  pedestal.position.set(0, .31, -4);
-  pedestal.receiveShadow = true;
-  scene.add(pedestal);
+        effectsBus = audio.createGain();
+        effectsBus.gain.value = .35;
+        effectsBus.connect(master);
+      }
+      audio.resume();
+    }
 
-  const obstacles = [];
-  function tree(x, z, scale = 1) {
-    const g = new T.Group();
-    g.position.set(x, .18, z);
-    g.scale.setScalar(scale);
-    scene.add(g);
-    box(g, [.38, 1.7, .38], [0, .85, 0], "#b08d8e");
-    box(g, [1.8, 1.3, 1.7], [0, 2, 0], "#72bba0");
-    box(g, [1.3, .85, 1.25], [.12, 2.9, 0], "#a2dfb3");
-    obstacles.push({ x, z, r: .7 * scale });
-  }
-  [[-6,-5,1.2],[6,-5,1],[-6,1,1],[6,2,1.25],[-5,5,.8],[7,6,.75]].forEach(v => tree(...v));
+    function tone(freq, duration, bus, type = "sine", delay = 0, level = .5) {
+      if (!audio || !bus) return;
+      const t = audio.currentTime + delay;
+      const osc = audio.createOscillator();
+      const env = audio.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t);
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(level, t + .008);
+      env.gain.exponentialRampToValueAtTime(.001, t + duration);
+      osc.connect(env);
+      env.connect(bus);
+      osc.start(t);
+      osc.stop(t + duration + .02);
+      osc.onended = () => { osc.disconnect(); env.disconnect(); };
+    }
 
-  for (let i = 0; i < 32; i++) {
-    const x = Math.sin(i * 9.2) * 7.6;
-    const z = Math.cos(i * 4.8) * 6.7;
-    if (Math.abs(x) < 2.8) continue;
-    box(scene, [.08,.3,.08], [x,.32,z], "#6da98e");
-    box(scene, [.26,.16,.26], [x,.52,z], i % 2 ? "#ffe0a3" : "#d4b9ff");
-  }
+    function stepSound() {
+      tone(100 + Math.random() * 35, .075, footstepsBus, "triangle", 0, .65);
+    }
 
-  // Globos y nubes.
-  const balloons = [];
-  for (const [x,z,color] of [[-3,-4,"#b39aff"],[3,-4,"#ffc0d6"],[-3.5,-5.5,"#ffe0a3"],[3.5,-5.5,"#baffdf"]]) {
-    const g = new T.Group();
-    g.position.set(x, .2, z);
-    box(g, [.025,2.8,.025], [0,1.4,0], "#f6efff");
-    const b = ball(g, .52, [0,3,0], color);
-    b.scale.y = 1.22;
-    scene.add(g);
-    balloons.push(g);
-  }
-  for (let i = 0; i < 9; i++) {
-    const g = new T.Group();
-    g.position.set(Math.sin(i * 2.3) * 23, -3 + i % 3, Math.cos(i * 2.3) * 23);
-    box(g, [4, .8, 2], [0,0,0], "#eeeafa");
-    box(g, [2,1.3,1.8], [.5,.4,0], "#eeeafa");
-    scene.add(g);
-  }
-
-  // Regalo gigante.
-  const gift = new T.Group();
-  gift.position.set(0, .48, -4);
-  scene.add(gift);
-  box(gift, [2.05,2,2.05], [0,1,0], "#9470ee");
-  box(gift, [.32,2.05,2.08], [0,1,0], "#ffe0a2");
-  box(gift, [2.08,2.05,.32], [0,1,0], "#ffe0a2");
-  box(gift, [2.22,.3,2.22], [0,2.12,0], "#b193ff");
-  box(gift, [.35,.32,2.25], [0,2.13,0], "#ffe0a2");
-  box(gift, [2.25,.32,.35], [0,2.13,0], "#ffe0a2");
-  const bowL = box(gift, [.85,.3,.55], [-.43,2.48,0], "#ffdb94");
-  const bowR = box(gift, [.85,.3,.55], [.43,2.48,0], "#ffdb94");
-  bowL.rotation.z = -.4;
-  bowR.rotation.z = .4;
-  ball(gift, .22, [0,2.48,0], "#ffedbc");
-
-  const marker = new T.Mesh(new T.OctahedronGeometry(.24), mat("#fff2ba"));
-  marker.position.set(0, 4, -4);
-  scene.add(marker);
-
-  // Personaje de bloques con brazos articulados.
-  const player = new T.Group();
-  player.position.set(0,.2,5.5);
-  player.rotation.y = Math.PI;
-  scene.add(player);
-  box(player, [.7,.78,.42], [0,1.05,0], "#7761d9");
-  box(player, [.47,.14,.44], [0,1.43,0], "#fff2d8");
-  box(player, [.6,.6,.57], [0,1.82,0], "#f4c89f");
-  box(player, [.65,.18,.61], [0,2.13,0], "#493649");
-  box(player, [.17,.24,.6], [-.25,2.01,0], "#493649");
-  for (const x of [-.14,.14]) box(player, [.065,.085,.025], [x,1.84,.294], "#3c3042");
-  box(player, [.14,.035,.025], [0,1.68,.295], "#ad6e6e");
-
-  function limb(x, y, color, length) {
-    const pivot = new T.Group();
-    pivot.position.set(x,y,0);
-    player.add(pivot);
-    box(pivot, [.25,length,.3], [0,-length / 2,0], color);
-    return pivot;
-  }
-  const leftArm = limb(-.49,1.37,"#f4c89f",.7);
-  const rightArm = limb(.49,1.37,"#f4c89f",.7);
-  const leftLeg = limb(-.2,.68,"#414571",.6);
-  const rightLeg = limb(.2,.68,"#414571",.6);
-  box(leftLeg, [.3,.17,.44], [0,-.55,.07], "#fff3e6");
-  box(rightLeg, [.3,.17,.44], [0,-.55,.07], "#fff3e6");
-
-  const keys = {};
-  const particles = [];
-  const colors = ["#b496ff","#ffe0a2","#ff9fc9","#b1ffda","#ffffff"];
-  let hits = 0, opened = false, modal = false;
-  let lastHit = -10, punch = 0, shake = 0, elapsed = 0;
-  let revealAt = Infinity;
-
-  function burst(count, power) {
-    for (let i = 0; i < count; i++) {
-      const mesh = new T.Mesh(boxGeo, mat(colors[i % colors.length]));
-      const size = .07 + Math.random() * .16;
-      mesh.scale.set(size, size * .6, size);
-      mesh.position.set(
-        (Math.random() - .5) * 1.6,
-        1.5 + Math.random() * 1.5,
-        -4 + (Math.random() - .5) * 1.6
-      );
-      scene.add(mesh);
-      particles.push({
-        mesh,
-        v: new T.Vector3((Math.random()-.5)*power, 2+Math.random()*power, (Math.random()-.5)*power),
-        life: 2 + Math.random() * 1.7
+    function openingSound() {
+      [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((n, i) => {
+        tone(n, .55, openingBus, "sine", i * .095, .25);
       });
+      tone(130.81, .6, openingBus, "triangle", 0, .35);
     }
-  }
-  function showInvitation() {
-    modal = true;
-    Object.keys(keys).forEach(k => keys[k] = false);
-    $("overlay").classList.add("open");
-    $("rsvp").focus();
-  }
-  function closeInvitation() {
-    modal = false;
-    $("overlay").classList.remove("open");
-    $("hit").focus();
-  }
-  $("replay").onclick = closeInvitation;
 
-  function strike() {
-    if (modal) return;
-    if (opened) { showInvitation(); return; }
-    if (player.position.distanceTo(new T.Vector3(0,.2,-4)) > 2.9) return;
-    if (elapsed - lastHit < .6) return;
-    lastHit = elapsed;
-    hits++;
-    punch = .3;
-    shake = .35;
-    player.rotation.y = Math.atan2(-player.position.x, -4-player.position.z);
-    document.querySelectorAll(".progress span").forEach((s,i) => s.classList.toggle("on", i < hits));
-    burst(reduced ? 8 : 28, 3);
-    $("missionTitle").textContent = `${hits} de 3 golpes`;
-    $("missionText").textContent = hits === 1 ? "¡Bien! La sorpresa está cada vez más cerca." : "Un golpe más y empieza la celebración.";
-    if (hits === 3) {
-      opened = true;
-      gift.visible = marker.visible = false;
-      burst(reduced ? 30 : 170, 8);
-      $("missionTitle").textContent = "¡Misión completada!";
-      $("missionText").textContent = "Encontraste una invitación muy especial.";
-      $("hit").textContent = "VER INVITACIÓN ↗";
-      revealAt = elapsed + (reduced ? .2 : 1.1);
-    }
-  }
-  $("hit").onclick = strike;
+    $("sound").onclick = () => {
+      initAudio();
+      muted = !muted;
+      if (master) master.gain.value = muted ? 0 : 1;
+      $("sound").textContent = muted ? "🔇" : "🔊";
+      $("sound").setAttribute("aria-label", muted ? "Activar sonidos" : "Silenciar sonidos");
+    };
 
-  addEventListener("keydown", e => {
-    if (modal) {
-      if (e.code === "Escape") closeInvitation();
-      if (e.code === "Tab") {
-        e.preventDefault();
-        (document.activeElement === $("rsvp") ? $("replay") : $("rsvp")).focus();
-      }
-      return;
-    }
-    if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space","KeyW","KeyA","KeyS","KeyD"].includes(e.code)) {
-      e.preventDefault();
-      keys[e.code] = true;
-      if (e.code === "Space" && !e.repeat) strike();
-    }
-  });
-  addEventListener("keyup", e => keys[e.code] = false);
-  addEventListener("blur", () => Object.keys(keys).forEach(k => keys[k] = false));
+    // ESCENA
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color("#b4e7ff");
+    scene.fog = new THREE.Fog("#b4e7ff", 27, 65);
 
-  document.querySelectorAll("#pad button").forEach(b => {
-    b.addEventListener("pointerdown", e => {
-      e.preventDefault();
-      b.setPointerCapture(e.pointerId);
-      keys[b.dataset.key] = true;
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.25;
+    $("world").appendChild(renderer.domElement);
+
+    const camera = new THREE.PerspectiveCamera(43, innerWidth / innerHeight, .1, 100);
+    scene.add(new THREE.HemisphereLight("#ffffff", "#8aa16d", 2.5));
+
+    const sun = new THREE.DirectionalLight("#fff4d7", 3);
+    sun.position.set(-9, 18, 9);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(sun.shadow.camera, {
+      left: -17, right: 17, top: 17, bottom: -17, near: .5, far: 60
     });
-    for (const name of ["pointerup","pointercancel","lostpointercapture"]) {
-      b.addEventListener(name, () => keys[b.dataset.key] = false);
-    }
-  });
+    sun.shadow.normalBias = .035;
+    scene.add(sun);
 
-  const clock = new T.Clock();
-  const target = new T.Vector3();
-  const desired = new T.Vector3();
-  const move = new T.Vector3();
-  camera.position.set(0,12,18);
-  const cameraOffset = new T.Vector3(0,12,15);
+    const mat = color => new THREE.MeshStandardMaterial({
+      color, roughness: .68
+    });
 
-  function validPosition(x,z) {
-    if (Math.abs(x) > 8.1 || Math.abs(z) > 7.1) return false;
-    if (!opened && Math.abs(x) < 1.5 && Math.abs(z+4) < 1.5) return false;
-    return !obstacles.some(o => Math.hypot(x-o.x,z-o.z) < o.r+.32);
-  }
+    const colors = {
+      grass: mat("#85d68b"),
+      soil: mat("#b789ed"),
+      white: mat("#fffaf3"),
+      path: mat("#ffe8ad"),
+      pink: mat("#ff55a1"),
+      ribbon: mat("#ffe275"),
+      purple: mat("#8e69ef"),
+      teal: mat("#53d9c3"),
+      skin: mat("#ffd096"),
+      shirt: mat("#9467ff"),
+      pants: mat("#363b78"),
+      dark: mat("#282447")
+    };
 
-  function animate() {
-    requestAnimationFrame(animate);
-    const dt = Math.min(clock.getDelta(), .04);
-    elapsed += dt;
-    move.set(0,0,0);
-    if (!modal) {
-      move.x = Number(!!(keys.KeyD || keys.ArrowRight)) - Number(!!(keys.KeyA || keys.ArrowLeft));
-      move.z = Number(!!(keys.KeyS || keys.ArrowDown)) - Number(!!(keys.KeyW || keys.ArrowUp));
-    }
-    const walking = move.lengthSq() > 0;
-    if (walking) {
-      move.normalize();
-      const nx = player.position.x + move.x * dt * 4.2;
-      const nz = player.position.z + move.z * dt * 4.2;
-      if (validPosition(nx,player.position.z)) player.position.x = nx;
-      if (validPosition(player.position.x,nz)) player.position.z = nz;
-      const angle = Math.atan2(move.x,move.z);
-      const delta = Math.atan2(Math.sin(angle-player.rotation.y),Math.cos(angle-player.rotation.y));
-      player.rotation.y += delta * Math.min(1, dt*14);
+    function box(w, h, d, material, x = 0, y = 0, z = 0, parent = scene) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+      return mesh;
     }
 
-    const gait = walking && !reduced ? Math.sin(elapsed*13)*.5 : 0;
-    leftLeg.rotation.x = gait;
-    rightLeg.rotation.x = -gait;
-    leftArm.rotation.x = -gait;
-    rightArm.rotation.x = gait;
-    player.position.y = .2 + (walking && !reduced ? Math.abs(Math.sin(elapsed*13))*.055 : 0);
-    if (punch > 0) {
-      punch -= dt;
-      rightArm.rotation.x = -Math.sin(Math.max(0,punch)/.3*Math.PI)*2;
-    }
-    if (shake > 0) {
-      shake = Math.max(0,shake-dt);
-      gift.rotation.z = reduced ? 0 : Math.sin(elapsed*65)*shake*.3;
-    } else gift.rotation.z = 0;
-
-    if (!reduced) {
-      marker.position.y = 4 + Math.sin(elapsed*2.6)*.18;
-      marker.rotation.y += dt;
-      balloons.forEach((b,i) => b.rotation.z = Math.sin(elapsed*1.4+i)*.045);
+    function sphere(r, material, x, y, z, parent = scene) {
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), material);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      parent.add(mesh);
+      return mesh;
     }
 
-    for (let i = particles.length-1; i >= 0; i--) {
-      const p = particles[i];
-      p.life -= dt;
-      p.v.y -= dt*6;
-      p.mesh.position.addScaledVector(p.v,dt);
-      p.mesh.rotation.x += dt*3;
-      p.mesh.rotation.z += dt*2;
-      if (p.mesh.position.y < .3) {
-        p.mesh.position.y = .3;
-        p.v.y = Math.abs(p.v.y)*.22;
-        p.v.x *= .94;
-        p.v.z *= .94;
+    box(21, 1.25, 19, colors.soil, 0, -.8, 0);
+    box(21, .35, 19, colors.grass, 0, -.02, 0);
+
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(160, 160),
+      mat("#78cdec")
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = -1.8;
+    scene.add(water);
+
+    // Camino de baldosas.
+    for (let i = 0; i < 9; i++) {
+      const z = 6.8 - i * 1.25;
+      const tile = box(2.1, .09, 1.03, colors.path,
+        Math.sin(i * .7) * .45, .2, z);
+      tile.rotation.y = Math.sin(i) * .08;
+    }
+
+    const obstacles = [];
+    function tree(x, z, color, size = 1) {
+      const trunk = mat("#b78569");
+      box(.45, 1.8 * size, .45, trunk, x, .9 * size, z);
+      box(1.9 * size, 1.65 * size, 1.9 * size, color, x, 2.2 * size, z);
+      box(1.35 * size, .75 * size, 1.35 * size, color, x, 3.1 * size, z);
+      obstacles.push({ x, z, r: .8 });
+    }
+
+    tree(-7, -5, colors.teal, 1.15);
+    tree(7, -6, colors.purple, 1.05);
+    tree(-8, 3, colors.pink, .85);
+    tree(7.8, 3.8, colors.teal, .95);
+    tree(-4.8, -7.5, colors.purple, .8);
+
+    // Cercado pastel.
+    for (let i = -9; i <= 9; i += 1.5) {
+      box(.17, .9, .17, colors.white, i, .6, -8.5);
+    }
+    box(18.5, .12, .14, colors.white, 0, .75, -8.5);
+    box(18.5, .12, .14, colors.white, 0, .4, -8.5);
+
+    // Flores pequeñas.
+    const flowerMats = [colors.pink, colors.ribbon, colors.purple];
+    for (let i = 0; i < 35; i++) {
+      const x = (Math.random() - .5) * 18;
+      const z = (Math.random() - .5) * 15;
+      if (Math.abs(x) < 2.7) continue;
+      box(.07, .22, .07, colors.teal, x, .27, z);
+      box(.28, .1, .28, flowerMats[i % 3], x, .41, z);
+    }
+
+    // Globos.
+    const balloons = [];
+    for (const [x, z] of [[-3.8, -4], [3.8, -4], [-6, 6]]) {
+      for (let i = 0; i < 3; i++) {
+        const bx = x + (i - 1) * .48;
+        const by = 2.8 + (i % 2) * .55;
+        const balloon = sphere(.39, flowerMats[i], bx, by, z);
+        balloon.scale.y = 1.22;
+        balloons.push({ mesh: balloon, y: by, phase: i + x });
+        box(.018, by - .3, .018, colors.white, bx, by / 2, z);
       }
-      if (p.life < .4) p.mesh.scale.multiplyScalar(Math.exp(-dt*8));
-      if (p.life <= 0) {
-        scene.remove(p.mesh);
-        particles.splice(i,1);
+    }
+
+    // Nubes cúbicas.
+    for (let i = 0; i < 7; i++) {
+      const cloud = new THREE.Group();
+      cloud.position.set((i - 3) * 9, 9 + (i % 3), -19 - (i % 2) * 5);
+      box(4, .9, 1.6, colors.white, 0, 0, 0, cloud);
+      box(2.4, 1.1, 1.6, colors.white, -.4, .6, 0, cloud);
+      scene.add(cloud);
+    }
+
+    // REGALO GIGANTE
+    const gift = new THREE.Group();
+    gift.position.set(0, .2, -3.5);
+    scene.add(gift);
+
+    box(2.65, .18, 2.65, colors.white, 0, .01, 0, gift);
+    const giftBody = new THREE.Group();
+    gift.add(giftBody);
+    box(2.25, 2.15, 2.25, colors.pink, 0, 1.2, 0, giftBody);
+    box(.39, 2.2, 2.29, colors.ribbon, 0, 1.2, 0, giftBody);
+    box(2.29, 2.2, .39, colors.ribbon, 0, 1.2, 0, giftBody);
+    box(2.48, .38, 2.48, colors.pink, 0, 2.4, 0, giftBody);
+    box(.42, .4, 2.5, colors.ribbon, 0, 2.41, 0, giftBody);
+    box(2.5, .4, .42, colors.ribbon, 0, 2.41, 0, giftBody);
+
+    for (const side of [-1, 1]) {
+      const bow = new THREE.Mesh(
+        new THREE.TorusGeometry(.42, .12, 8, 20), colors.ribbon
+      );
+      bow.position.set(side * .4, 2.9, 0);
+      bow.rotation.y = side * .25;
+      bow.rotation.z = side * -.4;
+      bow.scale.set(1.15, .8, 1);
+      giftBody.add(bow);
+    }
+    sphere(.2, colors.ribbon, 0, 2.77, 0, giftBody);
+
+    const marker = new THREE.Group();
+    marker.position.set(0, 4.2, -3.5);
+    scene.add(marker);
+    const arrow = new THREE.Mesh(new THREE.ConeGeometry(.24, .45, 4), colors.ribbon);
+    arrow.rotation.z = Math.PI;
+    marker.add(arrow);
+
+    // PERSONAJE DE BLOQUES
+    const player = new THREE.Group();
+    player.position.set(0, .17, 6.6);
+    scene.add(player);
+
+    const torso = box(.78, .85, .45, colors.shirt, 0, 1.18, 0, player);
+    box(.36, .26, .025, colors.ribbon, 0, 1.23, .24, player);
+    box(.66, .64, .62, colors.skin, 0, 1.93, 0, player);
+    box(.72, .18, .68, colors.dark, 0, 2.29, 0, player);
+    box(.17, .27, .65, colors.dark, -.28, 2.1, 0, player);
+
+    for (const x of [-.15, .15]) {
+      box(.065, .085, .025, colors.dark, x, 1.98, .32, player);
+    }
+    box(.17, .035, .025, colors.dark, 0, 1.79, .32, player);
+
+    function limb(x, y, w, h, material) {
+      const pivot = new THREE.Group();
+      pivot.position.set(x, y, 0);
+      player.add(pivot);
+      box(w, h, .38, material, 0, -h / 2, 0, pivot);
+      return pivot;
+    }
+
+    const leftArm = limb(-.57, 1.55, .31, .79, colors.skin);
+    const rightArm = limb(.57, 1.55, .31, .79, colors.skin);
+    const leftLeg = limb(-.22, .79, .34, .62, colors.pants);
+    const rightLeg = limb(.22, .79, .34, .62, colors.pants);
+    box(.37, .2, .5, colors.white, 0, -.65, .05, leftLeg);
+    box(.37, .2, .5, colors.white, 0, -.65, .05, rightLeg);
+
+    // PARTÍCULAS
+    const particles = [];
+    const particleGeometry = new THREE.BoxGeometry(1, 1, 1);
+    const particleMats = [
+      colors.pink, colors.ribbon, colors.purple, colors.teal, colors.white
+    ];
+
+    function burst(count, big = false) {
+      for (let i = 0; i < count; i++) {
+        const mesh = new THREE.Mesh(particleGeometry, particleMats[i % 5]);
+        const size = big ? .08 + Math.random() * .19 : .08;
+        mesh.scale.set(size, size * .65, size);
+        mesh.position.set(
+          gift.position.x + (Math.random() - .5),
+          1.6 + Math.random(),
+          gift.position.z + (Math.random() - .5)
+        );
+        scene.add(mesh);
+        particles.push({
+          mesh,
+          velocity: new THREE.Vector3(
+            (Math.random() - .5) * (big ? 10 : 4),
+            3 + Math.random() * (big ? 7 : 3),
+            (Math.random() - .5) * (big ? 10 : 4)
+          ),
+          life: big ? 3 : .8
+        });
       }
     }
 
-    if (elapsed >= revealAt) {
-      revealAt = Infinity;
-      showInvitation();
-    }
-    const near = Math.hypot(player.position.x,player.position.z+4) < 2.9;
-    $("hit").disabled = !opened && !near;
-    const hint = opened
-      ? "¡La celebración te espera!"
-      : near
-        ? `¡Encontraste el regalo! Golpéalo ${3-hits} ${3-hits === 1 ? "vez" : "veces"} más.`
-        : "Sigue el camino hasta el gran regalo violeta";
-    if ($("hint").textContent !== hint) $("hint").textContent = hint;
+    // ESTADO Y CONTROLES
+    let playing = false, opened = false, modal = false, hits = 0;
+    let hitCooldown = 0, shake = 0, punch = 0, walkTime = 0, stepTimer = 0;
+    let inviteTimer;
+    const keys = new Set();
+    const joystick = new THREE.Vector2();
+    const input = new THREE.Vector2();
+    const direction = new THREE.Vector3();
 
-    target.set(player.position.x*.65, .7, player.position.z*.65-1.3);
-    desired.copy(target).add(cameraOffset);
-    if (innerWidth < 600) desired.y += 3;
-    camera.position.lerp(desired, 1-Math.exp(-dt*3));
-    camera.lookAt(target);
-    renderer.render(scene,camera);
-  }
-  addEventListener("resize", () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth,innerHeight);
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  });
-  $("loader").remove();
-  animate();
-}
-</script>
+    function clearInput() {
+      keys.clear();
+      joystick.set(0, 0);
+      $("stick").style.transform = "";
+    }
+
+    window.addEventListener("blur", clearInput);
+    document.addEventListener("visibilitychange", () => {
+      clearInput();
+      if (audio && document.hidden) audio.suspend();
+      else if (audio && playing) audio.resume();
+    });
+
+    window.addEventListener("keydown", e => {
+      const codes = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+        "KeyW", "KeyA", "KeyS", "KeyD", "Space"];
+      if (!playing || modal || !codes.includes(e.code)) return;
+      e.preventDefault();
+      keys.add(e.code);
+      if (e.code === "Space" && !e.repeat) hitGift();
+    });
+
+    window.addEventListener("keyup", e => keys.delete(e.code));
+
+    let pointerId = null;
+    $("joystick").addEventListener("pointerdown", e => {
+      if (pointerId !== null) return;
+      pointerId = e.pointerId;
+      $("joystick").setPointerCapture(e.pointerId);
+      updateStick(e);
+    });
+
+    $("joystick").addEventListener("pointermove", e => {
+      if (e.pointerId === pointerId) updateStick(e);
+    });
+
+    function updateStick(e) {
+      const rect = $("joystick").getBoundingClientRect();
+      joystick.set(
+        (e.clientX - rect.left - rect.width / 2) / 38,
+        (e.clientY - rect.top - rect.height / 2) / 38
+      ).clampLength(0, 1);
+      $("stick").style.transform =
+        `translate(${joystick.x * 34}px, ${joystick.y * 34}px)`;
+    }
+
+    function releaseStick(e) {
+      if (e.pointerId !== pointerId) return;
+      pointerId = null;
+      joystick.set(0, 0);
+      $("stick").style.transform = "";
+    }
+
+    $("joystick").addEventListener("pointerup", releaseStick);
+    $("joystick").addEventListener("pointercancel", releaseStick);
+    $("joystick").addEventListener("lostpointercapture", releaseStick);
+
+    $("hit").addEventListener("pointerdown", e => {
+      e.preventDefault();
+      hitGift();
+    });
+
+    $("start").onclick = () => {
+      initAudio();
+      playing = true;
+      $("welcome").style.display = "none";
+    };
+
+    function showInvite() {
+      modal = true;
+      clearInput();
+      $("invite").style.display = "grid";
+      $("hit").style.display = "none";
+      $("back").focus();
+    }
+
+    $("back").onclick = () => {
+      modal = false;
+      $("invite").style.display = "none";
+      $("reopen").style.display = "block";
+      $("hint").style.display = "none";
+    };
+    $("reopen").onclick = showInvite;
+
+    // Mantiene el foco dentro de la invitación.
+    $("invite").addEventListener("keydown", e => {
+      if (e.key !== "Tab") return;
+      const focusable = [...$("invite").querySelectorAll("a,button")]
+        .filter(el => el.offsetParent !== null);
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus();
+      }
+    });
+
+    function giftDistance() {
+      return Math.hypot(
+        player.position.x - gift.position.x,
+        player.position.z - gift.position.z
+      );
+    }
+
+    function hitGift() {
+      if (!playing || modal || opened || hitCooldown > 0 || giftDistance() > 3) return;
+      initAudio();
+      hitCooldown = .48;
+      punch = .3;
+      shake = .35;
+      player.rotation.y = Math.atan2(
+        gift.position.x - player.position.x,
+        gift.position.z - player.position.z
+      );
+      hits++;
+      document.querySelectorAll(".dot").forEach((el, i) => {
+        el.classList.toggle("on", i < hits);
+      });
+      $("missionText").textContent = `${hits} de 3 golpes. ¡Ya casi!`;
+      tone(170 + hits * 55, .13, effectsBus, "triangle");
+      burst(reduced ? 6 : 18);
+
+      if (hits === 3) {
+        opened = true;
+        giftBody.visible = false;
+        marker.visible = false;
+        burst(reduced ? 25 : 150, true);
+        openingSound();
+        $("missionTitle").textContent = "¡Sorpresa desbloqueada!";
+        $("missionText").textContent = "Esta aventura recién empieza.";
+        $("hint").textContent = "¡Lo lograste! 🎉";
+        $("hit").style.display = "none";
+        inviteTimer = setTimeout(showInvite, 1100);
+      }
+    }
+
+    function blocked(x, z) {
+      if (Math.abs(x) > 9.5 || Math.abs(z) > 8.3) return true;
+      if (!opened &&
+          Math.abs(x - gift.position.x) < 1.65 &&
+          Math.abs(z - gift.position.z) < 1.65) return true;
+      return obstacles.some(o => Math.hypot(x - o.x, z - o.z) < o.r + .4);
+    }
+
+    const clock = new THREE.Clock();
+    const cameraTarget = new THREE.Vector3();
+    const lookTarget = new THREE.Vector3();
+    camera.position.set(0, 12, 18);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), .05);
+      const elapsed = clock.elapsedTime;
+      hitCooldown = Math.max(0, hitCooldown - dt);
+      punch = Math.max(0, punch - dt);
+
+      if (playing && !modal) {
+        input.set(
+          Number(keys.has("KeyD") || keys.has("ArrowRight")) -
+          Number(keys.has("KeyA") || keys.has("ArrowLeft")) + joystick.x,
+          Number(keys.has("KeyS") || keys.has("ArrowDown")) -
+          Number(keys.has("KeyW") || keys.has("ArrowUp")) + joystick.y
+        ).clampLength(0, 1);
+
+        if (input.length() < .12) input.set(0, 0);
+        direction.set(input.x, 0, input.y);
+
+        const oldX = player.position.x, oldZ = player.position.z;
+        const nx = oldX + direction.x * 4.4 * dt;
+        if (!blocked(nx, oldZ)) player.position.x = nx;
+        const nz = oldZ + direction.z * 4.4 * dt;
+        if (!blocked(player.position.x, nz)) player.position.z = nz;
+
+        const moving = Math.hypot(
+          player.position.x - oldX, player.position.z - oldZ
+        ) > .001;
+
+        if (moving) {
+          walkTime += dt * 12;
+          if (punch === 0) {
+            const angle = Math.atan2(direction.x, direction.z);
+            const diff = Math.atan2(
+              Math.sin(angle - player.rotation.y),
+              Math.cos(angle - player.rotation.y)
+            );
+            player.rotation.y += diff * Math.min(1, dt * 16);
+          }
+          stepTimer -= dt;
+          if (stepTimer <= 0) {
+            stepSound();
+            stepTimer = .32;
+          }
+        } else {
+          stepTimer = 0;
+        }
+
+        const swing = moving ? Math.sin(walkTime) * .65 : 0;
+        leftLeg.rotation.x = swing;
+        rightLeg.rotation.x = -swing;
+        leftArm.rotation.x = -swing;
+        rightArm.rotation.x = punch > 0
+          ? -Math.sin(punch / .3 * Math.PI) * 1.9 : swing;
+        player.position.y = .17 + (moving && !reduced
+          ? Math.abs(Math.sin(walkTime)) * .055 : 0);
+
+        if (!opened) {
+          const nearby = giftDistance() < 3;
+          $("hit").style.display = nearby ? "block" : "none";
+          $("hint").textContent = nearby
+            ? "¡Encontraste el regalo! Dale 3 golpes 👊"
+            : coarse
+              ? "Mueve la palanca y busca el regalo gigante 🎁"
+              : "WASD o flechas para caminar · Espacio para golpear";
+        }
+      }
+
+      if (!opened && !reduced) {
+        marker.position.y = 4.2 + Math.sin(elapsed * 3) * .2;
+        marker.rotation.y += dt;
+        if (shake > 0) {
+          shake -= dt;
+          giftBody.rotation.z = Math.sin(elapsed * 55) * shake * .3;
+          giftBody.rotation.x = Math.cos(elapsed * 43) * shake * .2;
+        } else {
+          giftBody.rotation.set(0, 0, Math.sin(elapsed * 1.8) * .025);
+        }
+      }
+
+      if (!reduced) balloons.forEach(b => {
+        b.mesh.position.y = b.y + Math.sin(elapsed * 1.5 + b.phase) * .08;
+      });
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        p.velocity.y -= 12 * dt;
+        p.mesh.position.addScaledVector(p.velocity, dt);
+        p.mesh.rotation.x += dt * 4;
+        p.mesh.rotation.z += dt * 3;
+        if (p.mesh.position.y < .25) {
+          p.mesh.position.y = .25;
+          p.velocity.y = Math.abs(p.velocity.y) * .28;
+          p.velocity.x *= .91;
+          p.velocity.z *= .91;
+        }
+        if (p.life < .4) p.mesh.scale.multiplyScalar(Math.exp(-dt * 7));
+        if (p.life <= 0) {
+          scene.remove(p.mesh);
+          particles.splice(i, 1);
+        }
+      }
+
+      const portrait = innerWidth < innerHeight;
+      cameraTarget.set(
+        player.position.x * .55,
+        portrait ? 15 : 12,
+        player.position.z * .55 + (portrait ? 17 : 14)
+      );
+      camera.position.lerp(cameraTarget, 1 - Math.exp(-dt * 4));
+      lookTarget.set(player.position.x * .65, .5, player.position.z * .65 - 1.4);
+      camera.lookAt(lookTarget);
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    });
+
+    animate();
+  </script>
 </body>
 </html>
