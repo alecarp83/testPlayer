@@ -976,11 +976,12 @@
 
         let vel = corriendo ? CFG.movimiento.velocidadCorrer : CFG.movimiento.velocidadCaminar;
         if (unica && !jugador.enAire) vel *= CFG.movimiento.factorAlAtacar;
-
+        if (jugador.carga) vel *= jugador.carga.tipo.factorVel || 1;
         const k = Math.min(1, Math.hypot(ix, iz));
         jugador.pos.x += mx * vel * k * dt;
         jugador.pos.z += mz * vel * k * dt;
         colisiones(jugador.pos);
+        colisionCajas(jugador.pos);
 
         const objetivo = Math.atan2(mx, mz);
         const d = Math.atan2(Math.sin(objetivo - jugador.rot), Math.cos(objetivo - jugador.rot));
@@ -988,15 +989,18 @@
       }
 
       // --- Física vertical ---
+      const sueloY = alturaApoyo(jugador.pos.x, jugador.pos.z, 0.2, jugador.carga);
+      if (!jugador.enAire && jugador.pos.y > sueloY + 0.01) jugador.enAire = true;
+
       if (jugador.enAire || jugador.vy !== 0) {
         const S = CFG.salto;
         let g = jugador.vy > 0 ? S.gravedad : S.gravedadCaida;
         if (Math.abs(jugador.vy) < S.umbralApice) g *= S.factorApice;
         jugador.vy = Math.max(jugador.vy + g * dt, S.velocidadMaxCaida);
         jugador.pos.y += jugador.vy * dt;
-        if (jugador.pos.y <= 0) {
+        if (jugador.pos.y <= sueloY && jugador.vy <= 0) {
           const impacto = Math.abs(jugador.vy);
-          jugador.pos.y = 0;
+          jugador.pos.y = sueloY;
           jugador.vy = 0;
           if (jugador.enAire) {
             jugador.enAire = false;
@@ -1005,6 +1009,11 @@
           }
         }
       }
+
+      // --- Cajas ---
+      actualizarCajas(dt);
+      $("btnAgarrar").classList.toggle("inactivo", !jugador.carga && !cajaCercana());
+
 
       // --- Selección de animación ---
       let anim;
