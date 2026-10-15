@@ -2,210 +2,666 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Test — Player Model</title>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-      }
-    }
-  </script>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#10121b">
+  <title>Character Lab - Aventura</title>
   <style>
-    :root { color-scheme: dark; }
+    :root {
+      --bg: #10121b; --panel: rgba(20, 23, 36, .72); --line: rgba(255,255,255,.12);
+      --text: #f1f2fa; --muted: #a9b0c8; --accent: #c4ff83;
+    }
     * { box-sizing: border-box; }
-    body {
-      margin: 0; min-height: 100vh;
-      background: radial-gradient(ellipse at top, #2a3048, #0e1018 60%);
-      color: #eaf2ff;
-      font-family: "Segoe UI", Roboto, Arial, sans-serif;
-      display: grid; place-items: center;
-      padding: 20px;
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: var(--text); }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    #mundo { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+    #mundo:active { cursor: grabbing; }
+    #mundo canvas { display: block; width: 100%; height: 100%; }
+
+    .glass { background: var(--panel); border: 1px solid var(--line);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+
+    /* HUD superior */
+    .top { position: fixed; top: 16px; left: 16px; right: 16px; display: flex;
+      justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
+    .top > * { pointer-events: auto; }
+    .jugador { display: flex; align-items: center; gap: 12px; padding: 8px 16px 8px 8px; border-radius: 18px; }
+    .jugador img { width: 52px; height: 52px; border-radius: 13px; object-fit: contain;
+      background: radial-gradient(ellipse, #3a4160, #1d2131 72%); }
+    .jugador strong { display: block; font-size: 15px; letter-spacing: -.3px; }
+    .jugador small { color: var(--muted); font-size: 11px; }
+    .estado { margin-top: 4px; font-size: 11px; color: var(--accent); display: flex; align-items: center; gap: 6px; }
+    .estado::before { content: ""; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+    .btn-perfil { display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-radius: 16px;
+      font-weight: 600; font-size: 13px; transition: transform .15s, border-color .15s; }
+    .btn-perfil:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .btn-perfil .ico { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
+      background: var(--accent); color: #223017; font-weight: 900; transform: rotate(-7deg); }
+
+    /* Barra de acciones */
+    .acciones { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px; padding: 8px; border-radius: 20px; }
+    .acciones button { position: relative; min-width: 74px; padding: 10px 10px 8px; border-radius: 13px;
+      border: 1px solid transparent; background: rgba(255,255,255,.04); font-size: 11px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px; transition: .15s; }
+    .acciones button:hover { background: rgba(255,255,255,.09); }
+    .acciones button.activo { border-color: #829e60; background: rgba(196,255,131,.13); color: var(--accent); }
+    .acciones .em { font-size: 19px; line-height: 1; }
+    .acciones kbd { position: absolute; top: 4px; right: 5px; font-size: 9px; color: var(--muted);
+      font-family: inherit; }
+
+    .ayuda { position: fixed; left: 16px; bottom: 18px; padding: 12px 14px; border-radius: 16px;
+      font-size: 11px; color: var(--muted); line-height: 1.9; }
+    .ayuda b { color: var(--text); font-weight: 600; }
+    .ayuda kbd { font-family: inherit; padding: 1px 6px; border-radius: 5px;
+      background: rgba(255,255,255,.1); color: var(--text); font-size: 10px; }
+
+    /* Joystick móvil */
+    #joy { position: fixed; left: 26px; bottom: 120px; width: 120px; height: 120px; border-radius: 50%;
+      display: none; touch-action: none; }
+    #joy .knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px;
+      border-radius: 50%; background: var(--accent); opacity: .85; box-shadow: 0 0 20px rgba(196,255,131,.5); }
+    #btnCorrer { position: fixed; right: 22px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
+      display: none; font-size: 11px; font-weight: 700; }
+    #btnCorrer.activo { background: var(--accent); color: #223017; }
+
+    /* Modal perfil */
+    .modal { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px;
+      background: rgba(8,10,16,.55); backdrop-filter: blur(6px); opacity: 0; pointer-events: none;
+      transition: opacity .2s; z-index: 10; }
+    .modal.abierto { opacity: 1; pointer-events: auto; }
+    .tarjeta { width: min(760px, 100%); max-height: 92vh; overflow-y: auto; border-radius: 26px;
+      padding: 26px; background: rgba(22,25,39,.94); transform: translateY(14px) scale(.98); transition: transform .25s; }
+    .modal.abierto .tarjeta { transform: none; }
+    .cab { display: flex; justify-content: space-between; align-items: start; gap: 14px; }
+    .eyebrow { color: var(--accent); font-size: 11px; letter-spacing: 2px; }
+    h2 { margin: 6px 0 4px; font-size: 28px; letter-spacing: -1px; }
+    .sub { color: var(--muted); font-size: 13px; margin: 0; }
+    .cerrar { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
+      background: rgba(255,255,255,.05); font-size: 18px; }
+    .campo { margin: 22px 0 18px; }
+    .campo label { display: block; font-size: 11px; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 8px; }
+    .campo input { width: 100%; padding: 13px 15px; border-radius: 13px; border: 1px solid var(--line);
+      background: #1b1f2e; outline: none; }
+    .campo input:focus { border-color: var(--accent); }
+    .skins { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .skin { padding: 0; text-align: left; overflow: hidden; border-radius: 18px; border: 1px solid var(--line);
+      background: #1b1f2e; transition: transform .15s, border-color .15s; position: relative; }
+    .skin:hover { transform: translateY(-3px); }
+    .skin.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .skin img { width: 100%; aspect-ratio: 1.1; object-fit: contain; display: block;
+      background: radial-gradient(ellipse, #3a4160, #1d2131 72%); }
+    .skin .info { padding: 11px 13px 14px; }
+    .skin strong { display: block; font-size: 15px; }
+    .skin small { color: var(--accent); font-size: 11px; }
+    .skin p { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 6px 0 0; }
+    .skin .badge { position: absolute; top: 10px; left: 10px; font-size: 10px; font-weight: 700;
+      padding: 5px 9px; border-radius: 20px; background: var(--accent); color: #223017; display: none; }
+    .skin.sel .badge { display: block; }
+    .pie { display: flex; justify-content: flex-end; margin-top: 20px; }
+    .guardar { padding: 13px 22px; border-radius: 13px; border: 0; background: var(--accent);
+      color: #223017; font-weight: 700; }
+
+    #toast { position: fixed; top: 90px; left: 50%; transform: translate(-50%, -10px); padding: 11px 18px;
+      border-radius: 14px; font-size: 13px; opacity: 0; transition: .25s; pointer-events: none; z-index: 11; }
+    #toast.ver { opacity: 1; transform: translate(-50%, 0); }
+
+    #carga { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--bg);
+      transition: opacity .5s; }
+    #carga.fuera { opacity: 0; pointer-events: none; }
+    #carga .logo { width: 60px; height: 60px; margin: 0 auto 16px; border-radius: 17px; display: grid;
+      place-items: center; background: var(--accent); color: #233119; font-size: 34px; font-weight: 900;
+      animation: giro 1.6s ease-in-out infinite; }
+    #carga p { color: var(--muted); font-size: 13px; text-align: center; max-width: 320px; }
+    @keyframes giro { 50% { transform: rotate(-12deg) scale(1.08); } }
+
+    @media (max-width: 860px), (pointer: coarse) {
+      .ayuda { display: none; }
+      #joy, #btnCorrer { display: block; }
+      .acciones { left: auto; right: 10px; bottom: 10px; transform: none; max-width: calc(100% - 20px);
+        overflow-x: auto; }
+      .acciones button { min-width: 62px; }
+      .acciones kbd { display: none; }
     }
-    .panel {
-      width: min(900px, 100%);
-      background: #1a1f30;
-      border: 1px solid #2e3550;
-      border-radius: 18px;
-      overflow: hidden;
+    @media (max-width: 600px) {
+      .skins { grid-template-columns: 1fr; }
+      .skin { display: grid; grid-template-columns: 110px 1fr; }
+      .skin img { height: 100%; aspect-ratio: auto; }
+      .btn-perfil span:last-child { display: none; }
     }
-    #viewport {
-      width: 100%; height: 480px;
-      background: radial-gradient(ellipse at 50% 40%, #35405e, #141826 70%);
-    }
-    .controls {
-      padding: 16px 20px;
-      border-top: 1px solid #2e3550;
-      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-    }
-    .swatch {
-      width: 28px; height: 28px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,.3);
-      cursor: pointer;
-    }
-    label { font-size: 12px; color: #9daac3; }
-    button {
-      padding: 8px 14px; border-radius: 8px;
-      background: #252c44; color: #eaf2ff;
-      border: 1px solid #37415e; cursor: pointer;
-    }
-    button:hover { background: #2f3855; }
-    button.active { background: #8de8ff; color: #142026; border-color: #8de8ff; }
-    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
   </style>
 </head>
 <body>
-  <div class="panel">
-    <div id="viewport"></div>
-    <div class="controls">
-      <div class="row">
-        <label>Piel</label><input type="color" id="c-piel" value="#d9a67e">
-        <label>Ropa</label><input type="color" id="c-ropa" value="#4a3f8a">
-        <label>Pantalón</label><input type="color" id="c-pantalon" value="#28243f">
-        <label>Pelo</label><input type="color" id="c-pelo" value="#5a4f8a">
-        <label>Acento</label><input type="color" id="c-acento" value="#8de8ff">
+  <div id="carga"><div><div class="logo">C</div><p id="cargaTxt">Construyendo el mundo...</p></div></div>
+  <div id="mundo"></div>
+
+  <div class="top">
+    <div class="jugador glass">
+      <img id="hudImg" alt="">
+      <div>
+        <strong id="hudNombre">Jugador</strong>
+        <small id="hudSkin">Bambú · Animales</small>
+        <div class="estado" id="hudAccion">Esperar</div>
       </div>
-      <div class="row">
-        <button data-action="idle" class="active">Idle</button>
-        <button data-action="walk">Caminar</button>
-        <button data-action="jump">Saltar</button>
-        <button data-action="attack">Atacar</button>
-        <button data-action="carry">Cargar</button>
+    </div>
+    <button class="btn-perfil glass" id="abrirPerfil" type="button">
+      <span class="ico">C</span><span>Perfil</span>
+    </button>
+  </div>
+
+  <div class="ayuda glass">
+    <b>Moverse</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <b>Correr</b> <kbd>Shift</kbd><br>
+    <b>Cámara</b> arrastrar · rueda para zoom · <b>Perfil</b> <kbd>P</kbd>
+  </div>
+
+  <nav class="acciones glass" id="acciones" aria-label="Animaciones"></nav>
+
+  <div id="joy" class="glass"><div class="knob"></div></div>
+  <button id="btnCorrer" class="glass" type="button">CORRER</button>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="tituloPerfil">
+    <div class="tarjeta">
+      <div class="cab">
+        <div>
+          <span class="eyebrow">PERFIL DEL JUGADOR</span>
+          <h2 id="tituloPerfil">Elige tu skin</h2>
+          <p class="sub">Cambia de personaje cuando quieras. Conservas tu posición en el mapa.</p>
+        </div>
+        <button class="cerrar" id="cerrarPerfil" type="button" aria-label="Cerrar">✕</button>
       </div>
+      <div class="campo">
+        <label for="nombreJugador">NOMBRE DE JUGADOR</label>
+        <input id="nombreJugador" maxlength="18" placeholder="Escribe tu nombre">
+      </div>
+      <div class="skins" id="skins"></div>
+      <div class="pie"><button class="guardar" id="guardar" type="button">Listo, a jugar</button></div>
     </div>
   </div>
 
-  <script type="module">
-    import * as THREE from 'three';
-    import { createPlayerModel, NATSUO_COLORS } from './player/player-model.js';
+  <div id="toast" class="glass"></div>
 
-    const viewport = document.getElementById('viewport');
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    renderer.setSize(viewport.clientWidth, viewport.clientHeight, false);
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="./sheet_personajes.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    const $ = id => document.getElementById(id);
+
+    if (!window.THREE || !window.Catalogo3D) {
+      $("cargaTxt").textContent = "No se pudieron cargar los recursos. Revisa tu conexión y que sheet_personajes.js esté junto a este archivo.";
+      return;
+    }
+
+    const T = window.THREE;
+    const { PERSONAJES, crearPersonaje } = window.Catalogo3D;
+
+    // ---------- Configuración del juego ----------
+    const SKINS = ["panda", "merlin", "aura"]
+      .map(id => PERSONAJES.find(p => p.id === id)).filter(Boolean);
+
+    const ACCIONES = [
+      { anim: "Saltar", label: "Saltar", em: "⤒", tecla: "Space", kbd: "␣", tipo: "unica", dur: 1 / 0.85 },
+      { anim: "Atacar (golpe de puño)", label: "Atacar", em: "👊", tecla: "KeyF", kbd: "F", tipo: "unica", dur: Math.PI / 6 },
+      { anim: "Baile 1", label: "Bailar 1", em: "🕺", tecla: "Digit1", kbd: "1", tipo: "emote" },
+      { anim: "Baile 2", label: "Bailar 2", em: "💃", tecla: "Digit2", kbd: "2", tipo: "emote" },
+      { anim: "Baile 3", label: "Bailar 3", em: "🤖", tecla: "Digit3", kbd: "3", tipo: "emote" },
+      { anim: "Dormir", label: "Dormir", em: "💤", tecla: "KeyZ", kbd: "Z", tipo: "emote" }
+    ];
+    const NOMBRES = {
+      "Esperar": "Esperar", "Camina": "Caminando", "Correr": "Corriendo", "Saltar": "Saltando",
+      "Atacar (golpe de puño)": "Atacando", "Baile 1": "Bailando 1", "Baile 2": "Bailando 2",
+      "Baile 3": "Bailando 3", "Dormir": "Durmiendo"
+    };
+
+    // ---------- Renderer y escena ----------
+    let renderer;
+    try {
+      renderer = new T.WebGLRenderer({ antialias: true });
+    } catch (e) {
+      $("cargaTxt").textContent = "Tu navegador no pudo iniciar WebGL.";
+      return;
+    }
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 0.9;
-    viewport.appendChild(renderer.domElement);
+    renderer.shadowMap.type = T.PCFSoftShadowMap;
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    $("mundo").appendChild(renderer.domElement);
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    camera.position.set(3.5, 2.8, 5.5);
-    camera.lookAt(0, 1.4, 0);
+    const escena = new T.Scene();
+    const CIELO = new T.Color("#9fd2f5");
+    escena.background = CIELO;
+    escena.fog = new T.Fog(CIELO, 35, 95);
 
-    scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x222831, 0.8));
-    const key = new THREE.DirectionalLight(0xffffff, 2.4);
-    key.position.set(4, 6, 4);
-    key.castShadow = true;
-    key.shadow.mapSize.set(1024, 1024);
-    key.shadow.camera.left = -3;
-    key.shadow.camera.right = 3;
-    key.shadow.camera.top = 4;
-    key.shadow.camera.bottom = -1;
-    scene.add(key);
+    const camara = new T.PerspectiveCamera(50, 1, 0.1, 200);
 
-    const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(3, 48),
-      new THREE.MeshStandardMaterial({ color: 0x1b2740, roughness: 0.9 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
+    escena.add(new T.HemisphereLight("#e8f4ff", "#4c6b3a", 1.9));
+    const sol = new T.DirectionalLight("#fff1d6", 3.2);
+    sol.castShadow = true;
+    sol.shadow.mapSize.set(2048, 2048);
+    Object.assign(sol.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 60 });
+    sol.shadow.normalBias = 0.04;
+    escena.add(sol, sol.target);
 
-    const playerModel = createPlayerModel({ THREE, colors: NATSUO_COLORS });
-    scene.add(playerModel.group);
-    const { torso, head, armL, armR, legL, legR } = playerModel.parts;
+    // ---------- Mapa ----------
+    const LIMITE = 46;
+    const obstaculos = [];
+    let semilla = 12345;
+    const rnd = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
+    const mats = {};
+    const mat = (c, extra = {}) => mats[c] || (mats[c] = new T.MeshStandardMaterial({ color: c, roughness: .85, ...extra }));
 
-    /* --- Animación simple (idle/walk/jump/attack/carry) --- */
-    let action = 'idle';
-    let time = 0;
+    function malla(geo, color, x, y, z, sombra = true) {
+      const m = new T.Mesh(geo, mat(color));
+      m.position.set(x, y, z);
+      m.castShadow = sombra;
+      m.receiveShadow = true;
+      escena.add(m);
+      return m;
+    }
 
-    function animate(dt) {
-      time += dt;
-      torso.rotation.set(0, 0, 0);
-      head.rotation.set(0, 0, 0);
-      armL.rotation.set(0, 0, 0);
-      armR.rotation.set(0, 0, 0);
-      legL.rotation.set(0, 0, 0);
-      legR.rotation.set(0, 0, 0);
+    // Suelo
+    const suelo = new T.Mesh(new T.PlaneGeometry(240, 240), mat("#79b85e"));
+    suelo.rotation.x = -Math.PI / 2;
+    suelo.receiveShadow = true;
+    escena.add(suelo);
 
-      const s = Math.sin(time * 6);
+    // Plaza central y caminos
+    malla(new T.CylinderGeometry(6, 6.2, 0.12, 48), "#c9c2b0", 0, 0.06, 0, false);
+    malla(new T.CylinderGeometry(4.6, 4.6, 0.14, 48), "#ddd6c3", 0, 0.07, 0, false);
+    const aro = new T.Mesh(new T.TorusGeometry(5.3, 0.05, 8, 96),
+      new T.MeshStandardMaterial({ color: "#c4ff83", emissive: "#c4ff83", emissiveIntensity: .5 }));
+    aro.rotation.x = Math.PI / 2; aro.position.y = 0.15;
+    escena.add(aro);
+    for (const [w, d, x, z] of [[2.6, 40, 0, 26], [2.6, 40, 0, -26], [40, 2.6, 26, 0], [40, 2.6, -26, 0]]) {
+      malla(new T.BoxGeometry(w, 0.08, d), "#cdbf9d", x, 0.04, z, false);
+    }
 
-      if (action === 'idle') {
-        const b = Math.sin(time * 2) * 0.03;
-        armL.rotation.x = b;
-        armR.rotation.x = -b;
-        torso.position.y = 1.12 + Math.sin(time * 1.6) * 0.02;
-      } else if (action === 'walk') {
-        legL.rotation.x = s * 0.7;
-        legR.rotation.x = -s * 0.7;
-        armL.rotation.x = -s * 0.5;
-        armR.rotation.x = s * 0.5;
-      } else if (action === 'jump') {
-        armL.rotation.z = -2.2;
-        armR.rotation.z = 2.2;
-        legL.rotation.x = 0.3;
-        legR.rotation.x = -0.3;
-      } else if (action === 'attack') {
-        const k = (Math.sin(time * 5) + 1) / 2;
-        armL.rotation.x = -k * 2.5;
-        torso.rotation.x = k * 0.2;
-      } else if (action === 'carry') {
-        armL.rotation.x = -Math.PI + 0.15;
-        armL.rotation.z = 0.15;
-        armR.rotation.x = -Math.PI + 0.15;
-        armR.rotation.z = -0.15;
+    // Cristal flotante en la plaza (decorativo)
+    const cristal = malla(new T.OctahedronGeometry(0.6), "#c4ff83", 0, 3.2, 0);
+    cristal.material = new T.MeshStandardMaterial({ color: "#c4ff83", emissive: "#9be05a", emissiveIntensity: .6, roughness: .3 });
+    malla(new T.CylinderGeometry(0.7, 0.9, 0.9, 6), "#9aa1b5", 0, 0.55, 0);
+    obstaculos.push({ x: 0, z: 0, r: 0.9 });
+
+    // Estanque
+    const agua = new T.Mesh(new T.CircleGeometry(5.5, 48),
+      new T.MeshStandardMaterial({ color: "#4fb3d9", roughness: .15, metalness: .2, transparent: true, opacity: .9 }));
+    agua.rotation.x = -Math.PI / 2; agua.position.set(16, 0.05, -15);
+    escena.add(agua);
+    malla(new T.TorusGeometry(5.6, 0.35, 6, 40), "#a5a99e", 16, 0.05, -15).rotation.x = Math.PI / 2;
+    obstaculos.push({ x: 16, z: -15, r: 5.8 });
+
+    // Árboles de bloques
+    const gTronco = new T.BoxGeometry(0.5, 1.6, 0.5);
+    const gHoja1 = new T.BoxGeometry(2.2, 1.3, 2.2);
+    const gHoja2 = new T.BoxGeometry(1.5, 1, 1.5);
+    const verdes = ["#3f8f4a", "#4ea055", "#5aa84b", "#3a7f52"];
+    function arbol(x, z, s) {
+      const g = new T.Group();
+      const t = new T.Mesh(gTronco, mat("#7a5236")); t.position.y = 0.8;
+      const c = verdes[Math.floor(rnd() * verdes.length)];
+      const h1 = new T.Mesh(gHoja1, mat(c)); h1.position.y = 2.1;
+      const h2 = new T.Mesh(gHoja2, mat(c)); h2.position.y = 3.1;
+      for (const m of [t, h1, h2]) { m.castShadow = m.receiveShadow = true; g.add(m); }
+      g.position.set(x, 0, z); g.scale.setScalar(s); g.rotation.y = rnd() * Math.PI;
+      escena.add(g);
+      obstaculos.push({ x, z, r: 0.45 * s });
+    }
+    function libre(x, z, margen) {
+      if (Math.hypot(x, z) < 8) return false;
+      if (Math.abs(x) < 2.5 || Math.abs(z) < 2.5) return false;
+      return obstaculos.every(o => Math.hypot(x - o.x, z - o.z) > o.r + margen);
+    }
+    for (let i = 0, n = 0; i < 400 && n < 80; i++) {
+      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
+      if (libre(x, z, 2)) { arbol(x, z, 0.8 + rnd() * 0.6); n++; }
+    }
+
+    // Rocas
+    const gRoca = new T.DodecahedronGeometry(1, 0);
+    for (let i = 0, n = 0; i < 200 && n < 22; i++) {
+      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
+      if (!libre(x, z, 1.5)) continue;
+      const s = 0.4 + rnd() * 0.7;
+      const r = malla(gRoca, rnd() > .5 ? "#9097a6" : "#7d8494", x, s * 0.5, z);
+      r.material.flatShading = true;
+      r.scale.set(s, s * 0.75, s);
+      r.rotation.set(rnd(), rnd() * 3, rnd());
+      obstaculos.push({ x, z, r: s * 0.9 });
+      n++;
+    }
+
+    // Flores
+    const gFlor = new T.BoxGeometry(0.18, 0.18, 0.18);
+    const gTallo = new T.BoxGeometry(0.05, 0.3, 0.05);
+    const coloresFlor = ["#ff8fb1", "#ffd86b", "#ffffff", "#b49bff", "#ff9a5a"];
+    for (let i = 0; i < 260; i++) {
+      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
+      if (Math.hypot(x, z) < 7 || Math.abs(x) < 1.6 || Math.abs(z) < 1.6) continue;
+      malla(gTallo, "#4b8c3c", x, 0.15, z, false);
+      malla(gFlor, coloresFlor[i % coloresFlor.length], x, 0.34, z, false);
+    }
+
+    // Montañas en el horizonte
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * Math.PI * 2 + rnd() * 0.2;
+      const d = 70 + rnd() * 15, h = 14 + rnd() * 16;
+      const m = malla(new T.ConeGeometry(9 + rnd() * 6, h, 5), i % 2 ? "#6f8f7a" : "#7d9a86",
+        Math.cos(a) * d, h / 2 - 0.5, Math.sin(a) * d, false);
+      m.material.flatShading = true;
+      m.rotation.y = rnd() * 3;
+    }
+
+    // Nubes
+    const nubes = [];
+    const gNube = new T.BoxGeometry(1, 1, 1);
+    const matNube = new T.MeshStandardMaterial({ color: "#ffffff", roughness: 1 });
+    for (let i = 0; i < 14; i++) {
+      const g = new T.Group();
+      for (let j = 0; j < 4; j++) {
+        const b = new T.Mesh(gNube, matNube);
+        b.scale.set(3 + rnd() * 3, 1.2 + rnd(), 2 + rnd() * 2);
+        b.position.set(j * 2 - 3, rnd() * 0.8, rnd() * 1.5);
+        g.add(b);
+      }
+      g.position.set((rnd() * 2 - 1) * 70, 22 + rnd() * 8, (rnd() * 2 - 1) * 70);
+      escena.add(g);
+      nubes.push(g);
+    }
+
+    // ---------- Personaje del jugador ----------
+    const jugador = {
+      pos: new T.Vector3(0, 0, 8),
+      rot: Math.PI,
+      modelo: null,
+      ficha: null
+    };
+
+    function equipar(id, avisar) {
+      const ficha = SKINS.find(s => s.id === id) || SKINS[0];
+      if (jugador.modelo) {
+        escena.remove(jugador.modelo.raiz);
+        jugador.modelo.destruir();
+      }
+      jugador.ficha = ficha;
+      jugador.modelo = crearPersonaje(T, ficha);
+      jugador.modelo.raiz.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      escena.add(jugador.modelo.raiz);
+      localStorage.setItem("cl_skin", ficha.id);
+      $("hudImg").src = miniaturas.get(ficha.id);
+      $("hudSkin").textContent = `${ficha.nombre} · ${ficha.categoria}`;
+      document.querySelectorAll(".skin").forEach(b => b.classList.toggle("sel", b.dataset.id === ficha.id));
+      if (avisar) toast(`Skin equipada: ${ficha.nombre}`);
+    }
+
+    // ---------- Miniaturas de las skins ----------
+    const miniaturas = new Map();
+    (function generarMiniaturas() {
+      const r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+      r.setSize(260, 236, false);
+      r.outputColorSpace = T.SRGBColorSpace;
+      r.toneMapping = T.ACESFilmicToneMapping;
+      r.toneMappingExposure = 1.2;
+      const e = new T.Scene();
+      e.add(new T.HemisphereLight("#edf3ff", "#596080", 2.5));
+      const l = new T.DirectionalLight("#fff0dc", 3.4); l.position.set(4, 7, 5); e.add(l);
+      const b = new T.DirectionalLight("#a5bcff", 2.2); b.position.set(-4, 3, -4); e.add(b);
+      const c = new T.PerspectiveCamera(38, 260 / 236, 0.1, 50);
+      c.position.set(3.2, 2.75, 5.7); c.lookAt(0, 1.58, 0);
+      for (const ficha of SKINS) {
+        const m = crearPersonaje(T, ficha);
+        e.add(m.raiz);
+        r.render(e, c);
+        miniaturas.set(ficha.id, r.domElement.toDataURL("image/png"));
+        e.remove(m.raiz);
+        m.destruir();
+      }
+      r.dispose();
+      r.forceContextLoss && r.forceContextLoss();
+    })();
+
+    // ---------- Interfaz: perfil ----------
+    const modal = $("modal");
+    let perfilAbierto = false;
+
+    for (const ficha of SKINS) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "skin"; b.dataset.id = ficha.id;
+      b.innerHTML = `<span class="badge">EQUIPADA</span><img alt=""><div class="info">
+        <strong></strong><small></small><p></p></div>`;
+      b.querySelector("img").src = miniaturas.get(ficha.id);
+      b.querySelector("strong").textContent = ficha.nombre;
+      b.querySelector("small").textContent = ficha.categoria;
+      b.querySelector("p").textContent = ficha.descripcion;
+      b.addEventListener("click", () => { if (ficha.id !== jugador.ficha.id) equipar(ficha.id, true); });
+      $("skins").appendChild(b);
+    }
+
+    const nombreGuardado = localStorage.getItem("cl_nombre") || "Jugador";
+    $("nombreJugador").value = nombreGuardado;
+    $("hudNombre").textContent = nombreGuardado;
+    $("nombreJugador").addEventListener("input", e => {
+      const n = e.target.value.trim() || "Jugador";
+      $("hudNombre").textContent = n;
+      localStorage.setItem("cl_nombre", n);
+    });
+
+    function abrirPerfil() { perfilAbierto = true; modal.classList.add("abierto"); teclas.clear(); }
+    function cerrarPerfil() { perfilAbierto = false; modal.classList.remove("abierto"); renderer.domElement.focus?.(); }
+    $("abrirPerfil").addEventListener("click", abrirPerfil);
+    $("cerrarPerfil").addEventListener("click", cerrarPerfil);
+    $("guardar").addEventListener("click", cerrarPerfil);
+    modal.addEventListener("click", e => { if (e.target === modal) cerrarPerfil(); });
+
+    let toastT;
+    function toast(txt) {
+      const t = $("toast");
+      t.textContent = txt; t.classList.add("ver");
+      clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("ver"), 1800);
+    }
+
+    // ---------- Acciones ----------
+    let unica = null;      // { anim, t, dur }
+    let emote = null;      // nombre de animación en bucle
+    const botones = new Map();
+
+    function ejecutar(acc) {
+      if (acc.tipo === "unica") {
+        if (unica) return;
+        emote = null;
+        unica = { anim: acc.anim, t: 0, dur: acc.dur };
+      } else {
+        unica = null;
+        emote = emote === acc.anim ? null : acc.anim;
       }
     }
 
-    /* --- Resize --- */
-    function resize() {
-      const w = viewport.clientWidth;
-      const h = viewport.clientHeight;
-      if (!w || !h) return;
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
+    for (const acc of ACCIONES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.innerHTML = `<span class="em">${acc.em}</span>${acc.label}<kbd>${acc.kbd}</kbd>`;
+      b.addEventListener("click", () => ejecutar(acc));
+      botones.set(acc.anim, b);
+      $("acciones").appendChild(b);
     }
-    new ResizeObserver(resize).observe(viewport);
-    resize();
 
-    /* --- Color pickers --- */
-    const colorIds = ['piel', 'ropa', 'pantalon', 'pelo', 'acento'];
-    const currentColors = { ...NATSUO_COLORS };
-    colorIds.forEach((id) => {
-      const input = document.getElementById('c-' + id);
-      input.addEventListener('input', () => {
-        currentColors[id] = input.value;
-        playerModel.setColors(currentColors);
-      });
+    // ---------- Entrada: teclado ----------
+    const teclas = new Set();
+    addEventListener("keydown", e => {
+      if (perfilAbierto) { if (e.key === "Escape") cerrarPerfil(); return; }
+      if (e.target.tagName === "INPUT") return;
+      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+      teclas.add(e.code);
+      if (e.repeat) return;
+      if (e.code === "KeyP") { abrirPerfil(); return; }
+      const acc = ACCIONES.find(a => a.tecla === e.code);
+      if (acc) ejecutar(acc);
+    });
+    addEventListener("keyup", e => teclas.delete(e.code));
+    addEventListener("blur", () => teclas.clear());
+
+    // ---------- Entrada: joystick móvil ----------
+    const joy = { x: 0, y: 0, id: null };
+    let correrMovil = false;
+    const joyEl = $("joy"), knob = joyEl.querySelector(".knob");
+    function moverJoy(e) {
+      const r = joyEl.getBoundingClientRect();
+      let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const max = r.width / 2, d = Math.hypot(dx, dy);
+      if (d > max) { dx *= max / d; dy *= max / d; }
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      joy.x = dx / max; joy.y = -dy / max;
+    }
+    joyEl.addEventListener("pointerdown", e => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moverJoy(e); });
+    joyEl.addEventListener("pointermove", e => { if (e.pointerId === joy.id) moverJoy(e); });
+    for (const ev of ["pointerup", "pointercancel"]) {
+      joyEl.addEventListener(ev, () => { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ""; });
+    }
+    $("btnCorrer").addEventListener("click", () => {
+      correrMovil = !correrMovil;
+      $("btnCorrer").classList.toggle("activo", correrMovil);
     });
 
-    /* --- Botones de acción --- */
-    document.querySelectorAll('button[data-action]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        action = btn.dataset.action;
-        document.querySelectorAll('button[data-action]').forEach((b) =>
-          b.classList.toggle('active', b === btn)
-        );
-      });
+    // ---------- Cámara orbital ----------
+    let yaw = 0, pitch = 0.42, dist = 9;
+    let arrastre = null;
+    const lienzo = renderer.domElement;
+    lienzo.addEventListener("pointerdown", e => { arrastre = { x: e.clientX, y: e.clientY, id: e.pointerId }; lienzo.setPointerCapture(e.pointerId); });
+    lienzo.addEventListener("pointermove", e => {
+      if (!arrastre || arrastre.id !== e.pointerId) return;
+      yaw -= (e.clientX - arrastre.x) * 0.008;
+      pitch = T.MathUtils.clamp(pitch + (e.clientY - arrastre.y) * 0.005, 0.08, 1.2);
+      arrastre.x = e.clientX; arrastre.y = e.clientY;
     });
+    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) lienzo.addEventListener(ev, () => arrastre = null);
+    lienzo.addEventListener("wheel", e => {
+      e.preventDefault();
+      dist = T.MathUtils.clamp(dist + e.deltaY * 0.01, 4.5, 18);
+    }, { passive: false });
 
-    /* --- Loop --- */
-    let last = performance.now();
-    function loop() {
-      requestAnimationFrame(loop);
-      const now = performance.now();
-      const dt = Math.min((now - last) / 1000, 0.05);
-      last = now;
-      animate(dt);
-      renderer.render(scene, camera);
+    const foco = new T.Vector3();
+    function actualizarCamara(dt) {
+      const objetivo = new T.Vector3(jugador.pos.x, 1.5, jugador.pos.z);
+      foco.lerp(objetivo, 1 - Math.exp(-dt * 10));
+      camara.position.set(
+        foco.x + Math.sin(yaw) * Math.cos(pitch) * dist,
+        foco.y + Math.sin(pitch) * dist,
+        foco.z + Math.cos(yaw) * Math.cos(pitch) * dist
+      );
+      camara.lookAt(foco);
     }
-    loop();
+
+    function redimensionar() {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camara.aspect = innerWidth / innerHeight;
+      camara.updateProjectionMatrix();
+    }
+    addEventListener("resize", redimensionar);
+    redimensionar();
+
+    // ---------- Bucle principal ----------
+    let animActual = "", tAnim = 0, reloj = 0;
+
+    function colisiones(p) {
+      const R = 0.6;
+      for (const o of obstaculos) {
+        const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), min = o.r + R;
+        if (d < min && d > 0.0001) { p.x = o.x + dx / d * min; p.z = o.z + dz / d * min; }
+      }
+      p.x = T.MathUtils.clamp(p.x, -LIMITE, LIMITE);
+      p.z = T.MathUtils.clamp(p.z, -LIMITE, LIMITE);
+    }
+
+    function actualizar(dt) {
+      reloj += dt;
+      let ix = 0, iz = 0;
+      if (teclas.has("KeyW") || teclas.has("ArrowUp")) iz += 1;
+      if (teclas.has("KeyS") || teclas.has("ArrowDown")) iz -= 1;
+      if (teclas.has("KeyD") || teclas.has("ArrowRight")) ix += 1;
+      if (teclas.has("KeyA") || teclas.has("ArrowLeft")) ix -= 1;
+      ix += joy.x; iz += joy.y;
+      const mag = Math.hypot(ix, iz);
+      if (mag > 1) { ix /= mag; iz /= mag; }
+      const moviendo = mag > 0.12;
+      const corriendo = moviendo && (teclas.has("ShiftLeft") || teclas.has("ShiftRight") || correrMovil);
+
+      if (moviendo && emote) emote = null;
+
+      if (moviendo) {
+        const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+        const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+        let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
+        const l = Math.hypot(mx, mz); mx /= l; mz /= l;
+        let vel = corriendo ? 7 : 3.2;
+        if (unica && unica.anim !== "Saltar") vel *= 0.25;
+        const k = Math.min(1, Math.hypot(ix, iz));
+        jugador.pos.x += mx * vel * k * dt;
+        jugador.pos.z += mz * vel * k * dt;
+        colisiones(jugador.pos);
+        const objetivo = Math.atan2(mx, mz);
+        const d = Math.atan2(Math.sin(objetivo - jugador.rot), Math.cos(objetivo - jugador.rot));
+        jugador.rot += d * Math.min(1, dt * 12);
+      }
+
+      let anim;
+      if (unica) {
+        unica.t += dt;
+        if (unica.t >= unica.dur) unica = null;
+        else anim = unica.anim;
+      }
+      if (!anim) anim = emote || (moviendo ? (corriendo ? "Correr" : "Camina") : "Esperar");
+
+      if (anim !== animActual) {
+        animActual = anim; tAnim = 0;
+        $("hudAccion").textContent = NOMBRES[anim] || anim;
+        botones.forEach((b, k) => b.classList.toggle("activo", k === anim));
+      } else tAnim += dt;
+
+      const m = jugador.modelo;
+      m.raiz.position.copy(jugador.pos);
+      m.raiz.rotation.y = jugador.rot;
+      m.animar(unica ? unica.t : tAnim, anim);
+
+      // Mundo vivo
+      cristal.rotation.y += dt * 1.2;
+      cristal.position.y = 3.2 + Math.sin(reloj * 2) * 0.2;
+      aro.material.emissiveIntensity = 0.4 + Math.sin(reloj * 2.5) * 0.25;
+      for (const n of nubes) {
+        n.position.x += dt * 0.8;
+        if (n.position.x > 80) n.position.x = -80;
+      }
+
+      sol.position.set(jugador.pos.x + 12, 22, jugador.pos.z + 8);
+      sol.target.position.copy(jugador.pos);
+      actualizarCamara(dt);
+    }
+
+    // ---------- Inicio ----------
+    equipar(localStorage.getItem("cl_skin") || "panda", false);
+    foco.set(jugador.pos.x, 1.5, jugador.pos.z);
+
+    let anterior = performance.now();
+    function bucle(ahora) {
+      requestAnimationFrame(bucle);
+      const dt = Math.min((ahora - anterior) / 1000, 0.05);
+      anterior = ahora;
+      if (!document.hidden) actualizar(dt);
+      renderer.render(escena, camara);
+    }
+    requestAnimationFrame(bucle);
+
+    setTimeout(() => $("carga").classList.add("fuera"), 350);
+    setTimeout(() => toast("Pulsa P para abrir tu perfil y cambiar de skin"), 1200);
+
+    lienzo.addEventListener("webglcontextlost", e => {
+      e.preventDefault();
+      toast("Se perdió el contexto gráfico. Recarga la página.");
+    });
+  })();
   </script>
 </body>
 </html>
