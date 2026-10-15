@@ -383,7 +383,7 @@
       hora: "16:00 a 19:00",
       lugar: "Salón Arcoíris · Calle Aventura 123",
       // Número internacional, solo dígitos. Vacío oculta la confirmación.
-      whatsapp: "",
+      whatsapp: "+5491167405019",
       mensaje: "¡Hola! Confirmo mi asistencia al cumpleaños de Mateo.",
       volumenPisadas: 0.30,
       volumenApertura: 0.50
@@ -400,7 +400,8 @@
     $("place").textContent = CONFIG.lugar;
 
     if (CONFIG.whatsapp) {
-      $("rsvp").href = `(https://wa.me/${CONFIG.whatsapp.replace(/\D/g) "")}?text=${encodeURIComponent(CONFIG.mensaje)}`;
+      //$("rsvp").href = `(https://wa.me/${CONFIG.whatsapp.replace(/\D/g) "")}?text=${encodeURIComponent(CONFIG.mensaje)}`;
+      $("rsvp").href = `https://wa.me/${CONFIG.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(CONFIG.mensaje)}`;
     } else {
       $("rsvp").style.display = "none";
     }
