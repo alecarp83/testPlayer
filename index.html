@@ -734,14 +734,14 @@ botonFisico($("btnCorrer"), () => {
       // --- Temporizador de aterrizaje ---
             // --- Selección de animación (sin estado de aterrizaje) ---
       let anim;
-      if (jugador.enAire) {
-        anim = CFG.salto.animacionSalto;
-      } else if (unica) {
+      if (unica) {
         unica.t += dt;
         if (unica.t >= unica.dur) unica = null;
         else anim = unica.anim;
       }
+      if (!anim && jugador.enAire) anim = CFG.salto.animacionSalto;
       if (!anim) anim = emote || (moviendo ? (corriendo ? "Correr" : "Camina") : "Esperar");
+
 
       if (anim !== animActual) {
         animActual = anim; tAnim = 0;
@@ -754,6 +754,17 @@ botonFisico($("btnCorrer"), () => {
       // La física manda: se fija la posición DESPUÉS de animar
       m.raiz.position.copy(jugador.pos);
       m.raiz.rotation.y = jugador.rot;
+
+      // Amortiguación visual del aterrizaje (squash suave)
+      if (jugador.aterrizando > 0) {
+        jugador.aterrizando = Math.max(0, jugador.aterrizando - dt);
+        const k = jugador.aterrizando / CFG.salto.duracionAterrizaje; // 1 → 0
+        const sq = Math.sin(k * Math.PI) * 0.12 * (0.4 + 0.6 * jugador.fuerzaAterrizaje);
+        m.raiz.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
+      } else {
+        m.raiz.scale.set(1, 1, 1);
+      }
+
 
 
       // --- Sonido de pasos ---
