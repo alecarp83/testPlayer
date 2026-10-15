@@ -70,17 +70,22 @@
       label: "ATACAR",
     },
 
-        // ---------------------------------------------------------------
+    // ---------------------------------------------------------------
     // Cajas del mapa
     // ---------------------------------------------------------------
     cajas: {
       tipos: {
-        chica:   { tam: 0.6, color: "#c8925a", marco: "#8a5a32", agarrable: true,  factorVel: 1.0 },
-        mediana: { tam: 0.9, color: "#b07a45", marco: "#6f4626", agarrable: true,  factorVel: 0.85 },
-        grande:  { tam: 1.5, color: "#8f6a4a", marco: "#4f3a2a", agarrable: false },
+        chica:   { tam: 0.6, color: "#c8925a", marco: "#8a5a32", agarrable: true,  movible: false, factorVel: 1.0 },
+        mediana: { tam: 0.9, color: "#b07a45", marco: "#6f4626", agarrable: true,  movible: false, factorVel: 0.85 },
+        grande:  { tam: 1.5, color: "#8f6a4a", marco: "#4f3a2a", agarrable: false, movible: true },
+        // Nuevas variantes por color (mismas físicas, distinto aspecto)
+        chicaRoja:   { tam: 0.6, color: "#c0392b", marco: "#7d241b", agarrable: true,  movible: false, factorVel: 1.0 },
+        medianaAzul: { tam: 0.9, color: "#2e6fb0", marco: "#1c4774", agarrable: true,  movible: false, factorVel: 0.85 },
+        grandeAmarilla: { tam: 1.5, color: "#e0b13a", marco: "#a07a1c", agarrable: false, movible: true },
       },
       // [tipo, x, z]
       ubicaciones: [
+        // Cajas originales
         ["chica",   3.5,  7.5],
         ["chica",  -4.0, 10.0],
         ["mediana", 8.0,  5.0],
@@ -88,17 +93,37 @@
         ["mediana", 6.0, -9.0],
         ["grande", -10.0, -9.0],
         ["grande",  11.0, 11.0],
+
+        // 3 chicas rojas
+        ["chicaRoja", -6.0,  -3.0],
+        ["chicaRoja",  2.0, -12.0],
+        ["chicaRoja", 12.0,   2.0],
+
+        // 4 medianas azules
+        ["medianaAzul", -12.0,  6.0],
+        ["medianaAzul",  14.0, -6.0],
+        ["medianaAzul", -2.0,  14.0],
+        ["medianaAzul",  9.0,  9.0],
+
+        // 2 grandes amarillas
+        ["grandeAmarilla", -14.0, -2.0],
+        ["grandeAmarilla",  5.0, -14.0],
       ],
       distanciaAgarre: 1.3,   // distancia máx. desde el borde de la caja
       distanciaLanzar: 3,     // unidades desde el jugador hasta donde cae
       impulsoLanzarY: 4.5,
       alturaCarga: 1.45,      // altura del centro de la caja al cargarla
       gravedad: -22,
+      // Movimiento de cajas grandes
+      mover: {
+        distancia: 1.5,       // distancia de empuje (una casilla ~ tam grande)
+        duracion: 0.35,       // segundos de la animación de empuje
+      },
     },
 
     botonAgarrar: { label: "AGARRAR", labelSoltar: "SOLTAR" },
     botonLanzar:  { label: "LANZAR" },
-
+    botonMover:   { label: "MOVER", labelDejar: "DEJAR" },
 
     // ---------------------------------------------------------------
     // Estados → nombre de animación en el catálogo 3D
@@ -146,7 +171,7 @@
       derecha: ["KeyD", "ArrowRight"],
       agarrar: "KeyE",
       lanzar: "KeyR",
-
+      mover: "KeyM",
     },
 
     // ---------------------------------------------------------------

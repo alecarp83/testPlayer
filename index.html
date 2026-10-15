@@ -2,986 +2,1343 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1">
-  <title>Una aventura de cumpleaños</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#10121b">
+  <title>Character Lab - Aventura</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@500;700;800;900&display=swap');
-
     :root {
-      --ink: #25234d;
-      --pink: #ff4e99;
-      --yellow: #ffe176;
-      --purple: #7657ed;
+      --bg: #10121b; --panel: rgba(20, 23, 36, .72); --line: rgba(255,255,255,.12);
+      --text: #f1f2fa; --muted: #a9b0c8; --accent: #c4ff83;
     }
-
     * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: var(--text); }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    #mundo { position: fixed; inset: 0; touch-action: none; cursor: grab; }
+    #mundo:active { cursor: grabbing; }
+    #mundo canvas { display: block; width: 100%; height: 100%; }
 
-    body {
-      margin: 0;
-      overflow: hidden;
-      color: var(--ink);
-      background: #ace4ff;
-      font-family: "Nunito", sans-serif;
-      touch-action: none;
+    .glass { background: var(--panel); border: 1px solid var(--line);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+
+    /* HUD superior */
+    .top { position: fixed; top: 16px; left: 16px; right: 16px; display: flex;
+      justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
+    .top > * { pointer-events: auto; }
+
+    /* Barra de salud */
+    .salud { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 16px;
+      min-width: 230px; }
+    .salud .corazon { font-size: 20px; line-height: 1; filter: drop-shadow(0 0 6px rgba(255,90,110,.6)); }
+    .salud .cuerpo { flex: 1; }
+    .salud .fila { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 1.5px;
+      color: var(--muted); margin-bottom: 5px; }
+    .salud .fila b { color: var(--text); font-weight: 700; letter-spacing: 0; }
+    .salud .barra { height: 12px; border-radius: 7px; background: rgba(0,0,0,.4);
+      border: 1px solid rgba(255,255,255,.1); overflow: hidden; }
+    .salud .relleno { height: 100%; width: 50%; border-radius: 7px;
+      background: linear-gradient(90deg, #7fdc4a, #c4ff83); box-shadow: 0 0 10px rgba(196,255,131,.5);
+      transition: width .3s ease, background .3s; }
+    .salud.media .relleno { background: linear-gradient(90deg, #e0b13a, #ffe07a); box-shadow: 0 0 10px rgba(255,224,122,.5); }
+    .salud.baja .relleno { background: linear-gradient(90deg, #d8394d, #ff7a8a); box-shadow: 0 0 10px rgba(255,90,110,.6); }
+
+    /* Columna derecha: Perfil + Mochila */
+    .derecha { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+    .btn-perfil { display: flex; align-items: center; gap: 9px; padding: 12px 16px; border-radius: 16px;
+      font-weight: 600; font-size: 13px; transition: transform .15s, border-color .15s; }
+    .btn-perfil:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .btn-perfil .ico { width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
+      background: var(--accent); color: #223017; font-weight: 900; transform: rotate(-7deg); }
+    .btn-mochila { width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center;
+      font-size: 24px; line-height: 1; padding: 0; transition: transform .15s, border-color .15s; }
+    .btn-mochila:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    /* Barra de acciones */
+    .acciones { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px; padding: 8px; border-radius: 20px; }
+    .acciones button { position: relative; min-width: 74px; padding: 10px 10px 8px; border-radius: 13px;
+      border: 1px solid transparent; background: rgba(255,255,255,.04); font-size: 11px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px; transition: .15s; }
+    .acciones button:hover { background: rgba(255,255,255,.09); }
+    .acciones button.activo { border-color: #829e60; background: rgba(196,255,131,.13); color: var(--accent); }
+    .acciones .em { font-size: 19px; line-height: 1; }
+    .acciones kbd { position: absolute; top: 4px; right: 5px; font-size: 9px; color: var(--muted);
+      font-family: inherit; }
+
+    .ayuda { position: fixed; left: 16px; bottom: 18px; padding: 12px 14px; border-radius: 16px;
+      font-size: 11px; color: var(--muted); line-height: 1.9; }
+    .ayuda b { color: var(--text); font-weight: 600; }
+    .ayuda kbd { font-family: inherit; padding: 1px 6px; border-radius: 5px;
+      background: rgba(255,255,255,.1); color: var(--text); font-size: 10px; }
+
+    /* Joystick móvil */
+    #joy { position: fixed; left: 26px; bottom: 120px; width: 120px; height: 120px; border-radius: 50%;
+      display: none; touch-action: none; }
+    #joy .knob { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px;
+      border-radius: 50%; background: var(--accent); opacity: .85; box-shadow: 0 0 20px rgba(196,255,131,.5); }
+    #btnCorrer { position: fixed; right: 22px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
+      display: none; font-size: 11px; font-weight: 700; }
+    #btnCorrer.activo { background: var(--accent); color: #223017; }
+
+    #btnSaltar { position: fixed; right: 100px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 11px; font-weight: 700; }
+    #btnSaltar.activo { background: var(--accent); color: #223017; }
+
+    #btnAtacar { position: fixed; right: 100px; bottom: 196px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 11px; font-weight: 700; }
+    #btnAtacar:active { background: var(--accent); color: #223017; }
+
+    /* Modal perfil */
+    .modal { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px;
+      background: rgba(8,10,16,.55); backdrop-filter: blur(6px); opacity: 0; pointer-events: none;
+      transition: opacity .2s; z-index: 10; }
+    .modal.abierto { opacity: 1; pointer-events: auto; }
+    .tarjeta { width: min(760px, 100%); max-height: 92vh; overflow-y: auto; border-radius: 26px;
+      padding: 26px; background: rgba(22,25,39,.94); transform: translateY(14px) scale(.98); transition: transform .25s; }
+    .modal.abierto .tarjeta { transform: none; }
+    .cab { display: flex; justify-content: space-between; align-items: start; gap: 14px; }
+    .eyebrow { color: var(--accent); font-size: 11px; letter-spacing: 2px; }
+    h2 { margin: 6px 0 4px; font-size: 28px; letter-spacing: -1px; }
+    .sub { color: var(--muted); font-size: 13px; margin: 0; }
+    .cerrar { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
+      background: rgba(255,255,255,.05); font-size: 18px; }
+    .campo { margin: 22px 0 18px; }
+    .campo label { display: block; font-size: 11px; color: var(--muted); letter-spacing: 1.5px; margin-bottom: 8px; }
+    .campo input { width: 100%; padding: 13px 15px; border-radius: 13px; border: 1px solid var(--line);
+      background: #1b1f2e; outline: none; }
+    .campo input:focus { border-color: var(--accent); }
+    .skins { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .skin { padding: 0; text-align: left; overflow: hidden; border-radius: 18px; border: 1px solid var(--line);
+      background: #1b1f2e; transition: transform .15s, border-color .15s; position: relative; }
+    .skin:hover { transform: translateY(-3px); }
+    .skin.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .skin img { width: 100%; aspect-ratio: 1.1; object-fit: contain; display: block;
+      background: radial-gradient(ellipse, #3a4160, #1d2131 72%); }
+    .skin .info { padding: 11px 13px 14px; }
+    .skin strong { display: block; font-size: 15px; }
+    .skin small { color: var(--accent); font-size: 11px; }
+    .skin p { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 6px 0 0; }
+    .skin .badge { position: absolute; top: 10px; left: 10px; font-size: 10px; font-weight: 700;
+      padding: 5px 9px; border-radius: 20px; background: var(--accent); color: #223017; display: none; }
+    .skin.sel .badge { display: block; }
+    .pie { display: flex; justify-content: flex-end; margin-top: 20px; }
+    .guardar { padding: 13px 22px; border-radius: 13px; border: 0; background: var(--accent);
+      color: #223017; font-weight: 700; }
+
+    #toast { position: fixed; top: 90px; left: 50%; transform: translate(-50%, -10px); padding: 11px 18px;
+      border-radius: 14px; font-size: 13px; opacity: 0; transition: .25s; pointer-events: none; z-index: 11; }
+    #toast.ver { opacity: 1; transform: translate(-50%, 0); }
+
+    #carga { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--bg);
+      transition: opacity .5s; }
+    #carga.fuera { opacity: 0; pointer-events: none; }
+    #carga .logo { width: 60px; height: 60px; margin: 0 auto 16px; border-radius: 17px; display: grid;
+      place-items: center; background: var(--accent); color: #233119; font-size: 34px; font-weight: 900;
+      animation: giro 1.6s ease-in-out infinite; }
+    #carga p { color: var(--muted); font-size: 13px; text-align: center; max-width: 320px; }
+    @keyframes giro { 50% { transform: rotate(-12deg) scale(1.08); } }
+
+    @media (max-width: 860px), (pointer: coarse) {
+      .ayuda { display: none; }
+      #joy, #btnCorrer { display: block; }
+      .acciones { left: auto; right: 10px; bottom: 10px; transform: none; max-width: calc(100% - 20px);
+        overflow-x: auto; }
+      .acciones button { min-width: 62px; }
+      .acciones kbd { display: none; }
     }
-
-    button, a { -webkit-tap-highlight-color: transparent; }
-
-    button {
-      font: inherit;
-      cursor: pointer;
-      border: 0;
-    }
-
-    button:focus-visible, a:focus-visible {
-      outline: 4px solid #ffb800;
-      outline-offset: 5px;
-    }
-
-    #world { position: fixed; inset: 0; }
-    #world canvas { display: block; }
-
-    .hud {
-      position: fixed;
-      top: max(20px, env(safe-area-inset-top));
-      left: 20px;
-      right: 20px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .mission {
-      background: #ffffffed;
-      border: 2px solid white;
-      border-radius: 24px;
-      padding: 16px 22px;
-      box-shadow: 0 10px 35px #44357518;
-      max-width: 360px;
-    }
-
-    .eyebrow {
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--purple);
-    }
-
-    .mission h1 {
-      font-family: "Fredoka", sans-serif;
-      font-weight: 600;
-      font-size: 23px;
-      margin: 5px 0;
-    }
-
-    .mission p {
-      font-size: 13px;
-      margin: 0;
-      color: #77718d;
-    }
-
-    .dots { display: flex; gap: 7px; margin-top: 12px; }
-
-    .dot {
-      width: 31px;
-      height: 9px;
-      background: #e9e4f7;
-      border-radius: 10px;
-      transition: background .2s, transform .2s;
-    }
-
-    .dot.on { background: var(--pink); transform: scaleY(1.2); }
-
-    #sound {
-      pointer-events: auto;
-      background: #fff;
-      border-radius: 17px;
-      width: 48px;
-      height: 48px;
-      box-shadow: 0 8px 24px #44357518;
-      font-size: 20px;
-    }
-
-    #hint {
-      position: fixed;
-      left: 50%;
-      bottom: 32px;
-      transform: translateX(-50%);
-      border-radius: 30px;
-      padding: 12px 22px;
-      background: #292348db;
-      color: white;
-      font-size: 13px;
-      font-weight: 800;
-      text-align: center;
-      pointer-events: none;
-      z-index: 2;
-      max-width: calc(100% - 40px);
-      width: max-content;
-    }
-
-    #hit {
-      position: fixed;
-      bottom: max(40px, env(safe-area-inset-bottom));
-      right: 30px;
-      width: 115px;
-      height: 115px;
-      border-radius: 50%;
-      background: var(--pink);
-      color: white;
-      font-weight: 900;
-      font-size: 15px;
-      border: 6px solid #ffffffb3;
-      box-shadow: 0 8px 0 #bd3674, 0 14px 35px #ab327b35;
-      display: none;
-      z-index: 3;
-      transition: transform .12s;
-    }
-
-    #hit:active { transform: translateY(5px) scale(.96); }
-    #hit span { display: block; font-size: 32px; margin-bottom: 3px; }
-
-    #joystick {
-      position: fixed;
-      left: 25px;
-      bottom: max(40px, env(safe-area-inset-bottom));
-      width: 122px;
-      height: 122px;
-      border-radius: 50%;
-      background: #ffffff55;
-      border: 3px solid #ffffffa8;
-      display: none;
-      z-index: 3;
-      touch-action: none;
-    }
-
-    #stick {
-      position: absolute;
-      left: 34px;
-      top: 34px;
-      width: 48px;
-      height: 48px;
-      background: white;
-      border-radius: 50%;
-      box-shadow: 0 5px 15px #423a6625;
-      pointer-events: none;
-    }
-
-    .overlay {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 22px;
-      background: #4b3c7955;
-      backdrop-filter: blur(10px);
-      z-index: 10;
-    }
-
-    .panel {
-      width: min(460px, 100%);
-      background: #fffdf9;
-      padding: 38px 30px;
-      border-radius: 34px;
-      border: 5px solid white;
-      text-align: center;
-      box-shadow: 0 25px 90px #32224d40;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .panel::before {
-      content: "";
-      position: absolute;
-      width: 210px;
-      height: 210px;
-      border-radius: 50%;
-      background: #ffe17655;
-      top: -120px;
-      right: -65px;
-      pointer-events: none;
-    }
-
-    .hero-icon { font-size: 64px; margin-bottom: 14px; }
-
-    .panel h2 {
-      font-family: "Fredoka", sans-serif;
-      font-size: clamp(32px, 6vw, 44px);
-      line-height: 1.05;
-      font-weight: 600;
-      margin: 12px 0 16px;
-      letter-spacing: -.7px;
-    }
-
-    .panel p { color: #79728b; line-height: 1.65; }
-
-    .primary {
-      display: block;
-      background: var(--purple);
-      color: white;
-      padding: 17px 22px;
-      border-radius: 18px;
-      width: 100%;
-      font-size: 16px;
-      font-weight: 900;
-      box-shadow: 0 6px 0 #5940ba;
-      text-decoration: none;
-      margin-top: 23px;
-    }
-
-    .secondary {
-      margin-top: 20px;
-      background: transparent;
-      color: #817897;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    #invite { display: none; }
-
-    #invite .panel {
-      animation: reveal .6s cubic-bezier(.2, 1.3, .4, 1);
-      max-height: 92dvh;
-      overflow-y: auto;
-      touch-action: pan-y;
-    }
-
-    .age {
-      display: inline-block;
-      border-radius: 14px;
-      background: var(--yellow);
-      padding: 8px 18px;
-      font-family: "Fredoka", sans-serif;
-      font-size: 24px;
-      transform: rotate(-4deg);
-    }
-
-    .details {
-      text-align: left;
-      display: grid;
-      gap: 12px;
-      margin-top: 25px;
-      padding: 19px;
-      border-radius: 20px;
-      background: #f2eefc;
-      font-size: 14px;
-    }
-
-    .details div { display: flex; gap: 12px; align-items: center; }
-    .details span:first-child { font-size: 22px; }
-    .details strong { display: block; color: var(--purple); font-size: 11px; }
-    #reopen { display: none; }
-
-    @keyframes reveal {
-      from { opacity: 0; transform: translateY(45px) scale(.75) rotate(-5deg); }
-      to { opacity: 1; transform: none; }
-    }
-
-    @media (pointer: coarse) {
-      #joystick { display: block; }
-      #hint { bottom: 188px; font-size: 12px; }
-    }
-
     @media (max-width: 600px) {
-      .hud { top: 12px; left: 12px; right: 12px; }
-      .mission { padding: 13px 16px; max-width: calc(100% - 55px); }
-      .mission h1 { font-size: 19px; }
-      .mission p { font-size: 11px; }
-      #hit { width: 98px; height: 98px; right: 22px; }
-      .panel { padding: 28px 22px; }
+      .skins { grid-template-columns: 1fr; }
+      .skin { display: grid; grid-template-columns: 110px 1fr; }
+      .skin img { height: 100%; aspect-ratio: auto; }
+      .btn-perfil span:last-child { display: none; }
+      .salud { min-width: 0; width: min(230px, 60vw); }
+    }
+    #btnAgarrar { position: fixed; right: 176px; bottom: 196px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 10px; font-weight: 700; transition: opacity .15s; }
+    #btnAgarrar.inactivo { opacity: .45; }
+    #btnAgarrar.cargando { background: rgba(196,255,131,.2); border-color: var(--accent); color: var(--accent); }
+    #btnLanzar { position: fixed; right: 176px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 10px; font-weight: 700; }
+    #btnLanzar:active, #btnAgarrar:active { background: var(--accent); color: #223017; }
+
+    /* Botón MOVER / DEJAR (cajas grandes) */
+    #btnMover { position: fixed; right: 252px; bottom: 120px; width: 66px; height: 66px; border-radius: 50%;
+      display: block; font-size: 10px; font-weight: 700; transition: opacity .15s; }
+    #btnMover.inactivo { opacity: .45; }
+    #btnMover.moviendo { background: rgba(196,255,131,.2); border-color: var(--accent); color: var(--accent); }
+    #btnMover:active { background: var(--accent); color: #223017; }
+
+    .oculto { display: none !important; }
+
+    #btnSaltar, #btnCorrer, #btnAtacar, #btnAgarrar, #btnLanzar, #btnMover {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before { animation: none !important; transition: none !important; }
-    }
   </style>
 </head>
 <body>
-  <div id="world"></div>
+  <div id="carga"><div><div class="logo">C</div><p id="cargaTxt">Construyendo el mundo...</p></div></div>
+  <div id="mundo"></div>
 
-  <header class="hud">
-    <section class="mission">
-      <div class="eyebrow">Birthday adventure</div>
-      <h1 id="missionTitle">Encuentra la sorpresa</h1>
-      <p id="missionText">Hay un regalo gigante esperando por ti.</p>
-      <div class="dots" aria-label="Golpes al regalo">
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
+  <div class="top">
+    <div class="salud glass" id="salud" role="meter" aria-label="Salud" aria-valuemin="0">
+      <span class="corazon">❤️</span>
+      <div class="cuerpo">
+        <div class="fila"><span>SALUD</span><b id="saludTxt">50 / 100</b></div>
+        <div class="barra"><div class="relleno" id="saludRelleno"></div></div>
       </div>
-    </section>
-    <button id="sound" aria-label="Silenciar sonidos">🔊</button>
-  </header>
-
-  <div id="hint" role="status" aria-live="polite">
-    WASD o flechas para caminar · Espacio para golpear
+    </div>
+    <div class="derecha">
+      <button class="btn-perfil glass" id="abrirPerfil" type="button">
+        <span class="ico">C</span><span>Perfil</span>
+      </button>
+      <button class="btn-mochila glass" id="abrirMochila" type="button" aria-label="Mochila" title="Mochila">🎒</button>
+    </div>
   </div>
 
-  <div id="joystick" role="group" aria-label="Control táctil para caminar">
-    <div id="stick"></div>
+  <div class="ayuda glass">
+    <b>Moverse</b> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> · <b>Correr</b> <kbd>Shift</kbd> · <b>Saltar</b> <kbd>Space</kbd><br>
+    <b>Agarrar/Soltar</b> <kbd>E</kbd> · <b>Lanzar</b> <kbd>R</kbd> · <b>Mover/Dejar</b> <kbd>M</kbd><br>
+    <b>Cámara</b> arrastrar · rueda para zoom · <b>Perfil</b> <kbd>P</kbd> · <b>Mochila</b> <kbd>B</kbd>
   </div>
 
-  <button id="hit" aria-label="Golpear regalo">
-    <span>👊</span>¡GOLPEA!
-  </button>
+  <nav class="acciones glass" id="acciones" aria-label="Animaciones"></nav>
 
-  <section id="welcome" class="overlay">
-    <div class="panel">
-      <div class="hero-icon">🎮</div>
-      <div class="eyebrow">Una misión muy especial</div>
-      <h2>Una sorpresa.<br>¡Una gran aventura!</h2>
-      <p>Explora esta pequeña isla, encuentra el regalo gigante
-        y dale <b>3 golpes</b> para descubrir tu invitación.</p>
-      <button class="primary" id="start">¡Vamos a jugar! ✨</button>
-      <p style="font-size:11px;margin-bottom:0">
-        Activa el sonido para disfrutar la aventura
-      </p>
-    </div>
-  </section>
+  <div id="joy" class="glass"><div class="knob"></div></div>
+  <button id="btnCorrer" class="glass" type="button">CORRER</button>
+  <button id="btnSaltar" class="glass" type="button" aria-label="Saltar">SALTAR</button>
+  <button id="btnAtacar" class="glass" type="button" aria-label="Atacar">ATACAR</button>
+  <button id="btnAgarrar" class="glass inactivo" type="button" aria-label="Agarrar">AGARRAR</button>
+  <button id="btnLanzar" class="glass oculto" type="button" aria-label="Lanzar">LANZAR</button>
+  <button id="btnMover" class="glass oculto" type="button" aria-label="Mover">MOVER</button>
 
-  <section id="invite" class="overlay" role="dialog"
-           aria-modal="true" aria-labelledby="inviteTitle">
-    <div class="panel">
-      <div class="eyebrow">¡Misión completada!</div>
-      <div class="hero-icon" style="margin:12px 0">🎉</div>
-      <div class="age" id="age"></div>
-      <h2 id="inviteTitle"></h2>
-      <p>¡Estás invitado a una fiesta llena de juegos,
-        risas y aventuras!</p>
-
-      <div class="details">
-        <div><span>📅</span><div><strong>DÍA</strong><span id="date"></span></div></div>
-        <div><span>⏰</span><div><strong>HORA</strong><span id="time"></span></div></div>
-        <div><span>📍</span><div><strong>LUGAR</strong><span id="place"></span></div></div>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="tituloPerfil">
+    <div class="tarjeta">
+      <div class="cab">
+        <div>
+          <span class="eyebrow">PERFIL DEL JUGADOR</span>
+          <h2 id="tituloPerfil">Elige tu skin</h2>
+          <p class="sub">Cambia de personaje cuando quieras. Conservas tu posición en el mapa.</p>
+        </div>
+        <button class="cerrar" id="cerrarPerfil" type="button" aria-label="Cerrar">✕</button>
       </div>
-
-      <a class="primary" id="rsvp" target="_blank" rel="noopener">
-        ¡Voy a la aventura! 💜
-      </a>
-      <button class="secondary" id="back">Seguir explorando</button>
+      <div class="campo">
+        <label for="nombreJugador">NOMBRE DE JUGADOR</label>
+        <input id="nombreJugador" maxlength="18" placeholder="Escribe tu nombre">
+      </div>
+      <div class="skins" id="skins"></div>
+      <div class="pie"><button class="guardar" id="guardar" type="button">Listo, a jugar</button></div>
     </div>
-  </section>
+  </div>
 
-  <button id="reopen" class="primary"
-          style="position:fixed;bottom:25px;left:50%;transform:translateX(-50%);width:auto;z-index:4">
-    🎉 Ver invitación
-  </button>
+  <div id="toast" class="glass"></div>
 
-  <script type="module">
-    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-
-    // PERSONALIZA ESTOS DATOS
-    const CONFIG = {
-      nombre: "MATEO",
-      edad: 7,
-      fecha: "Sábado 21 de noviembre",
-      hora: "16:00 a 19:00",
-      lugar: "Salón Arcoíris · Calle Aventura 123",
-      // Número internacional, solo dígitos. Vacío oculta la confirmación.
-      whatsapp: "+5491167405019",
-      mensaje: "¡Hola! Confirmo mi asistencia al cumpleaños de Mateo.",
-      volumenPisadas: 0.30,
-      volumenApertura: 0.50
-    };
-
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="./sheet_personajes.js"></script>
+  <script src="./config_player.js"></script>
+  <script src="./audio_juego.js"></script>
+  <script>
+  (function () {
+    "use strict";
     const $ = id => document.getElementById(id);
-    const coarse = matchMedia("(pointer: coarse)").matches;
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    $("age").textContent = `¡Cumplo ${CONFIG.edad}!`;
-    $("inviteTitle").textContent = `¡${CONFIG.nombre} te invita!`;
-    $("date").textContent = CONFIG.fecha;
-    $("time").textContent = CONFIG.hora;
-    $("place").textContent = CONFIG.lugar;
-
-    if (CONFIG.whatsapp) {
-      //$("rsvp").href = `(https://wa.me/${CONFIG.whatsapp.replace(/\D/g) "")}?text=${encodeURIComponent(CONFIG.mensaje)}`;
-      $("rsvp").href = `https://wa.me/${CONFIG.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(CONFIG.mensaje)}`;
-    } else {
-      $("rsvp").style.display = "none";
+    if (!window.THREE || !window.Catalogo3D) {
+      $("cargaTxt").textContent = "No se pudieron cargar los recursos. Revisa tu conexión y que sheet_personajes.js esté junto a este archivo.";
+      return;
     }
 
-    // AUDIO: buses independientes con los volúmenes solicitados.
-    let audio, footstepsBus, openingBus, effectsBus, master;
-    let muted = false;
+    const T = window.THREE;
+    const { PERSONAJES, crearPersonaje } = window.Catalogo3D;
 
-    function initAudio() {
-      if (!audio) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        audio = new AudioCtx();
-        master = audio.createGain();
-        master.connect(audio.destination);
-
-        footstepsBus = audio.createGain();
-        footstepsBus.gain.value = CONFIG.volumenPisadas;
-        footstepsBus.connect(master);
-
-        openingBus = audio.createGain();
-        openingBus.gain.value = CONFIG.volumenApertura;
-        openingBus.connect(master);
-
-        effectsBus = audio.createGain();
-        effectsBus.gain.value = .35;
-        effectsBus.connect(master);
-      }
-      audio.resume();
+    // ---------- Configuración del jugador ----------
+    const CFG = window.ConfigPlayer;
+    if (!CFG) {
+      $("cargaTxt").textContent = "Falta config_player.js junto a este archivo.";
+      return;
     }
+    const ACCIONES = CFG.acciones;
 
-    function tone(freq, duration, bus, type = "sine", delay = 0, level = .5) {
-      if (!audio || !bus) return;
-      const t = audio.currentTime + delay;
-      const osc = audio.createOscillator();
-      const env = audio.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, t);
-      env.gain.setValueAtTime(0, t);
-      env.gain.linearRampToValueAtTime(level, t + .008);
-      env.gain.exponentialRampToValueAtTime(.001, t + duration);
-      osc.connect(env);
-      env.connect(bus);
-      osc.start(t);
-      osc.stop(t + duration + .02);
-      osc.onended = () => { osc.disconnect(); env.disconnect(); };
+    // ---------- Skins jugables ----------
+    const SKINS = ["kitsune", "panda", "merlin", "aura", "alex",
+                   "nova", "salvia", "akira", "yuki", "atlas",
+                   "ember", "onyx", "chicle", "menta", "leo",
+                   "vera", "nico", "alma", "bruno", "roldan",
+                   "sigrid", "kael", "duna", "ferrum", "boreal", "brasa"]
+      .map(id => PERSONAJES.find(p => p.id === id)).filter(Boolean);
+
+    // ---------- Renderer y escena ----------
+    let renderer;
+    try {
+      renderer = new T.WebGLRenderer({ antialias: true });
+    } catch (e) {
+      $("cargaTxt").textContent = "Tu navegador no pudo iniciar WebGL.";
+      return;
     }
-
-    function stepSound() {
-      tone(100 + Math.random() * 35, .075, footstepsBus, "triangle", 0, .65);
-    }
-
-    function openingSound() {
-      [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((n, i) => {
-        tone(n, .55, openingBus, "sine", i * .095, .25);
-      });
-      tone(130.81, .6, openingBus, "triangle", 0, .35);
-    }
-
-    $("sound").onclick = () => {
-      initAudio();
-      muted = !muted;
-      if (master) master.gain.value = muted ? 0 : 1;
-      $("sound").textContent = muted ? "🔇" : "🔊";
-      $("sound").setAttribute("aria-label", muted ? "Activar sonidos" : "Silenciar sonidos");
-    };
-
-    // ESCENA
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#b4e7ff");
-    scene.fog = new THREE.Fog("#b4e7ff", 27, 65);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
-    $("world").appendChild(renderer.domElement);
+    renderer.shadowMap.type = T.PCFSoftShadowMap;
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    $("mundo").appendChild(renderer.domElement);
 
-    const camera = new THREE.PerspectiveCamera(43, innerWidth / innerHeight, .1, 100);
-    scene.add(new THREE.HemisphereLight("#ffffff", "#8aa16d", 2.5));
+    const escena = new T.Scene();
+    const CIELO = new T.Color("#9fd2f5");
+    escena.background = CIELO;
+    escena.fog = new T.Fog(CIELO, 40, 110);
 
-    const sun = new THREE.DirectionalLight("#fff4d7", 3);
-    sun.position.set(-9, 18, 9);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    Object.assign(sun.shadow.camera, {
-      left: -17, right: 17, top: 17, bottom: -17, near: .5, far: 60
-    });
-    sun.shadow.normalBias = .035;
-    scene.add(sun);
+    const camara = new T.PerspectiveCamera(50, 1, 0.1, 200);
 
-    const mat = color => new THREE.MeshStandardMaterial({
-      color, roughness: .68
-    });
+    escena.add(new T.HemisphereLight("#e8f4ff", "#4c6b3a", 1.9));
+    const sol = new T.DirectionalLight("#fff1d6", 3.2);
+    sol.castShadow = true;
+    sol.shadow.mapSize.set(2048, 2048);
+    Object.assign(sol.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 60 });
+    sol.shadow.normalBias = 0.04;
+    escena.add(sol, sol.target);
 
-    const colors = {
-      grass: mat("#85d68b"),
-      soil: mat("#b789ed"),
-      white: mat("#fffaf3"),
-      path: mat("#ffe8ad"),
-      pink: mat("#ff55a1"),
-      ribbon: mat("#ffe275"),
-      purple: mat("#8e69ef"),
-      teal: mat("#53d9c3"),
-      skin: mat("#ffd096"),
-      shirt: mat("#9467ff"),
-      pants: mat("#363b78"),
-      dark: mat("#282447")
-    };
+    // ---------- Mapa ----------
+    const LIMITE = 46;
+    const obstaculos = [];
+    let semilla = 12345;
+    const rnd = () => (semilla = (semilla * 16807) % 2147483647) / 2147483647;
+    const mats = {};
+    const mat = (c, extra = {}) => mats[c] || (mats[c] = new T.MeshStandardMaterial({ color: c, roughness: .85, ...extra }));
 
-    function box(w, h, d, material, x = 0, y = 0, z = 0, parent = scene) {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-      mesh.position.set(x, y, z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      parent.add(mesh);
-      return mesh;
+    function malla(geo, color, x, y, z, sombra = true) {
+      const m = new T.Mesh(geo, mat(color));
+      m.position.set(x, y, z);
+      m.castShadow = sombra;
+      m.receiveShadow = true;
+      escena.add(m);
+      return m;
     }
 
-    function sphere(r, material, x, y, z, parent = scene) {
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), material);
-      mesh.position.set(x, y, z);
-      mesh.castShadow = true;
-      parent.add(mesh);
-      return mesh;
+    // Suelo
+    const suelo = new T.Mesh(new T.PlaneGeometry(240, 240), mat("#79b85e"));
+    suelo.rotation.x = -Math.PI / 2;
+    suelo.receiveShadow = true;
+    escena.add(suelo);
+
+    // Plaza central y caminos
+    malla(new T.CylinderGeometry(6, 6.2, 0.12, 48), "#c9c2b0", 0, 0.06, 0, false);
+    malla(new T.CylinderGeometry(4.6, 4.6, 0.14, 48), "#ddd6c3", 0, 0.07, 0, false);
+    const aro = new T.Mesh(new T.TorusGeometry(5.3, 0.05, 8, 96),
+      new T.MeshStandardMaterial({ color: "#c4ff83", emissive: "#c4ff83", emissiveIntensity: .5 }));
+    aro.rotation.x = Math.PI / 2; aro.position.y = 0.15;
+    escena.add(aro);
+    for (const [w, d, x, z] of [[2.6, 40, 0, 26], [2.6, 40, 0, -26], [40, 2.6, 26, 0], [40, 2.6, -26, 0]]) {
+      malla(new T.BoxGeometry(w, 0.08, d), "#cdbf9d", x, 0.04, z, false);
     }
 
-    box(21, 1.25, 19, colors.soil, 0, -.8, 0);
-    box(21, .35, 19, colors.grass, 0, -.02, 0);
+    // Cristal flotante
+    const cristal = malla(new T.OctahedronGeometry(0.6), "#c4ff83", 0, 3.2, 0);
+    cristal.material = new T.MeshStandardMaterial({ color: "#c4ff83", emissive: "#9be05a", emissiveIntensity: .6, roughness: .3 });
+    malla(new T.CylinderGeometry(0.7, 0.9, 0.9, 6), "#9aa1b5", 0, 0.55, 0);
+    obstaculos.push({ x: 0, z: 0, r: 0.9 });
 
-    const water = new THREE.Mesh(
-      new THREE.PlaneGeometry(160, 160),
-      mat("#78cdec")
-    );
-    water.rotation.x = -Math.PI / 2;
-    water.position.y = -1.8;
-    scene.add(water);
+    // Estanque
+    const agua = new T.Mesh(new T.CircleGeometry(5.5, 48),
+      new T.MeshStandardMaterial({ color: "#4fb3d9", roughness: .15, metalness: .2, transparent: true, opacity: .9 }));
+    agua.rotation.x = -Math.PI / 2; agua.position.set(16, 0.05, -15);
+    escena.add(agua);
+    malla(new T.TorusGeometry(5.6, 0.35, 6, 40), "#a5a99e", 16, 0.05, -15).rotation.x = Math.PI / 2;
+    obstaculos.push({ x: 16, z: -15, r: 5.8 });
 
-    // Camino de baldosas.
-    for (let i = 0; i < 9; i++) {
-      const z = 6.8 - i * 1.25;
-      const tile = box(2.1, .09, 1.03, colors.path,
-        Math.sin(i * .7) * .45, .2, z);
-      tile.rotation.y = Math.sin(i) * .08;
+    // ---------- Cajas ----------
+    const CAJ = CFG.cajas;
+    const cajas = [];
+    const R_JUG = 0.45; // radio del jugador frente a cajas
+
+    function crearMallaCaja(tipo) {
+      const s = tipo.tam, g = new T.Group();
+      g.add(new T.Mesh(new T.BoxGeometry(s, s, s), mat(tipo.color)));
+      const b = s * 0.12, L = s + 0.03, h = s / 2;
+      const esq = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+      const listones = [
+        ...esq.map(([a, c]) => [b, L, b, a * h, 0, c * h]),   // verticales
+        ...esq.map(([a, c]) => [L, b, b, 0, a * h, c * h]),   // horizontales X
+        ...esq.map(([a, c]) => [b, b, L, a * h, c * h, 0]),   // horizontales Z
+      ];
+      for (const [w, hh, d, x, y, z] of listones) {
+        const m = new T.Mesh(new T.BoxGeometry(w, hh, d), mat(tipo.marco));
+        m.position.set(x, y, z); g.add(m);
+      }
+      for (const lado of [-1, 1]) {           // listón diagonal delante y detrás
+        const d = new T.Mesh(new T.BoxGeometry(s * 1.2, b * 0.8, b * 0.5), mat(tipo.marco));
+        d.position.z = lado * (h + 0.005); d.rotation.z = Math.PI / 4; g.add(d);
+      }
+      g.traverse(o => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+      return g;
     }
 
-    const obstacles = [];
-    function tree(x, z, color, size = 1) {
-      const trunk = mat("#b78569");
-      box(.45, 1.8 * size, .45, trunk, x, .9 * size, z);
-      box(1.9 * size, 1.65 * size, 1.9 * size, color, x, 2.2 * size, z);
-      box(1.35 * size, .75 * size, 1.35 * size, color, x, 3.1 * size, z);
-      obstacles.push({ x, z, r: .8 });
+    function sincronizarCaja(c) {
+      c.malla.position.set(c.pos.x, c.pos.y + c.tam / 2, c.pos.z);
     }
 
-    tree(-7, -5, colors.teal, 1.15);
-    tree(7, -6, colors.purple, 1.05);
-    tree(-8, 3, colors.pink, .85);
-    tree(7.8, 3.8, colors.teal, .95);
-    tree(-4.8, -7.5, colors.purple, .8);
-
-    // Cercado pastel.
-    for (let i = -9; i <= 9; i += 1.5) {
-      box(.17, .9, .17, colors.white, i, .6, -8.5);
-    }
-    box(18.5, .12, .14, colors.white, 0, .75, -8.5);
-    box(18.5, .12, .14, colors.white, 0, .4, -8.5);
-
-    // Flores pequeñas.
-    const flowerMats = [colors.pink, colors.ribbon, colors.purple];
-    for (let i = 0; i < 35; i++) {
-      const x = (Math.random() - .5) * 18;
-      const z = (Math.random() - .5) * 15;
-      if (Math.abs(x) < 2.7) continue;
-      box(.07, .22, .07, colors.teal, x, .27, z);
-      box(.28, .1, .28, flowerMats[i % 3], x, .41, z);
+    for (const [nombre, x, z] of CAJ.ubicaciones) {
+      const tipo = CAJ.tipos[nombre];
+      const malla = crearMallaCaja(tipo);
+      escena.add(malla);
+      const c = { nombre, tipo, tam: tipo.tam, pos: new T.Vector3(x, 0, z),
+                  vel: new T.Vector3(), estado: "suelo", malla };
+      sincronizarCaja(c);
+      cajas.push(c);
     }
 
-    // Globos.
-    const balloons = [];
-    for (const [x, z] of [[-3.8, -4], [3.8, -4], [-6, 6]]) {
-      for (let i = 0; i < 3; i++) {
-        const bx = x + (i - 1) * .48;
-        const by = 2.8 + (i % 2) * .55;
-        const balloon = sphere(.39, flowerMats[i], bx, by, z);
-        balloon.scale.y = 1.22;
-        balloons.push({ mesh: balloon, y: by, phase: i + x });
-        box(.018, by - .3, .018, colors.white, bx, by / 2, z);
+    // ---------- Indicador de selección (aro verde para agarrar / naranja para mover) ----------
+    const indicadorAgarre = (function () {
+      const g = new T.Group();
+      const anillo = new T.Mesh(
+        new T.TorusGeometry(0.55, 0.05, 8, 32),
+        new T.MeshBasicMaterial({ color: "#c4ff83", transparent: true, opacity: 0.95 })
+      );
+      anillo.rotation.x = Math.PI / 2;
+      g.add(anillo);
+      // pequeña flecha hacia arriba
+      const flecha = new T.Mesh(
+        new T.ConeGeometry(0.12, 0.28, 6),
+        new T.MeshBasicMaterial({ color: "#c4ff83", transparent: true, opacity: 0.95 })
+      );
+      flecha.position.y = 0.55;
+      g.add(flecha);
+      g.visible = false;
+      escena.add(g);
+      return g;
+    })();
+
+    const indicadorMover = (function () {
+      const g = new T.Group();
+      const anillo = new T.Mesh(
+        new T.TorusGeometry(0.95, 0.06, 8, 32),
+        new T.MeshBasicMaterial({ color: "#ffb347", transparent: true, opacity: 0.95 })
+      );
+      anillo.rotation.x = Math.PI / 2;
+      g.add(anillo);
+      const flecha = new T.Mesh(
+        new T.ConeGeometry(0.18, 0.36, 6),
+        new T.MeshBasicMaterial({ color: "#ffb347", transparent: true, opacity: 0.95 })
+      );
+      flecha.position.y = 0.85;
+      g.add(flecha);
+      g.visible = false;
+      escena.add(g);
+      return g;
+    })();
+
+    function dentroDeCaja(x, z, margen = 0) {
+      return cajas.some(c => Math.abs(x - c.pos.x) < c.tam / 2 + margen &&
+                             Math.abs(z - c.pos.z) < c.tam / 2 + margen);
+    }
+
+    // Altura de la superficie más alta bajo (x,z): suelo = 0 o techo de una caja
+    function alturaApoyo(x, z, mitad, ignorar) {
+      let h = 0;
+      for (const c of cajas) {
+        if (c === ignorar || c.estado !== "suelo") continue;
+        if (Math.abs(x - c.pos.x) < c.tam / 2 + mitad &&
+            Math.abs(z - c.pos.z) < c.tam / 2 + mitad) h = Math.max(h, c.pos.y + c.tam);
+      }
+      return h;
+    }
+
+    // Empuja un punto fuera de árboles/rocas/muro
+    function fueraDeObstaculos(p, radio) {
+      for (const o of obstaculos) {
+        const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), min = o.r + radio;
+        if (d < min && d > 0.0001) { p.x = o.x + dx / d * min; p.z = o.z + dz / d * min; }
+      }
+      p.x = T.MathUtils.clamp(p.x, -LIMITE + radio, LIMITE - radio);
+      p.z = T.MathUtils.clamp(p.z, -LIMITE + radio, LIMITE - radio);
+    }
+
+    // ¿La caja en vuelo choca de costado con algo?
+    function chocaLateral(c) {
+      const h = c.tam / 2;
+      if (Math.abs(c.pos.x) > LIMITE - h || Math.abs(c.pos.z) > LIMITE - h) return true;
+      for (const o of obstaculos) {
+        if (Math.hypot(c.pos.x - o.x, c.pos.z - o.z) < o.r + h * 0.9 && c.pos.y < 3) return true;
+      }
+      for (const o of cajas) {
+        if (o === c || o.estado !== "suelo") continue;
+        const solapa = Math.abs(c.pos.x - o.pos.x) < (o.tam + c.tam) / 2 * 0.95 &&
+                       Math.abs(c.pos.z - o.pos.z) < (o.tam + c.tam) / 2 * 0.95;
+        if (solapa && c.pos.y < o.pos.y + o.tam - 0.25 && c.pos.y + c.tam > o.pos.y) return true;
+      }
+      return false;
+    }
+
+    // Colisión horizontal jugador ↔ cajas (AABB vs círculo)
+    function colisionCajas(p) {
+      for (const c of cajas) {
+        if (c.estado === "cargada") continue;
+        if (p.y >= c.pos.y + c.tam - 0.05 || p.y + 1.9 < c.pos.y) continue; // está encima o debajo
+        const h = c.tam / 2;
+        const cx = T.MathUtils.clamp(p.x, c.pos.x - h, c.pos.x + h);
+        const cz = T.MathUtils.clamp(p.z, c.pos.z - h, c.pos.z + h);
+        const dx = p.x - cx, dz = p.z - cz, d = Math.hypot(dx, dz);
+        if (d >= R_JUG) continue;
+        if (d > 1e-4) { p.x = cx + dx / d * R_JUG; p.z = cz + dz / d * R_JUG; }
+        else {
+          const ox = h - Math.abs(p.x - c.pos.x), oz = h - Math.abs(p.z - c.pos.z);
+          if (ox < oz) p.x = c.pos.x + Math.sign(p.x - c.pos.x || 1) * (h + R_JUG);
+          else         p.z = c.pos.z + Math.sign(p.z - c.pos.z || 1) * (h + R_JUG);
+        }
       }
     }
 
-    // Nubes cúbicas.
-    for (let i = 0; i < 7; i++) {
-      const cloud = new THREE.Group();
-      cloud.position.set((i - 3) * 9, 9 + (i % 3), -19 - (i % 2) * 5);
-      box(4, .9, 1.6, colors.white, 0, 0, 0, cloud);
-      box(2.4, 1.1, 1.6, colors.white, -.4, .6, 0, cloud);
-      scene.add(cloud);
+    // Árboles
+    const gTronco = new T.BoxGeometry(0.5, 1.6, 0.5);
+    const gHoja1 = new T.BoxGeometry(2.2, 1.3, 2.2);
+    const gHoja2 = new T.BoxGeometry(1.5, 1, 1.5);
+    const verdes = ["#3f8f4a", "#4ea055", "#5aa84b", "#3a7f52"];
+    function arbol(x, z, s) {
+      const g = new T.Group();
+      const t = new T.Mesh(gTronco, mat("#7a5236")); t.position.y = 0.8;
+      const c = verdes[Math.floor(rnd() * verdes.length)];
+      const h1 = new T.Mesh(gHoja1, mat(c)); h1.position.y = 2.1;
+      const h2 = new T.Mesh(gHoja2, mat(c)); h2.position.y = 3.1;
+      for (const m of [t, h1, h2]) { m.castShadow = m.receiveShadow = true; g.add(m); }
+      g.position.set(x, 0, z); g.scale.setScalar(s); g.rotation.y = rnd() * Math.PI;
+      escena.add(g);
+      obstaculos.push({ x, z, r: 0.45 * s });
+    }
+    function libre(x, z, margen) {
+      if (Math.hypot(x, z) < 8) return false;
+      if (Math.abs(x) < 2.5 || Math.abs(z) < 2.5) return false;
+      return !dentroDeCaja(x, z, margen + 0.5) &&
+             obstaculos.every(o => Math.hypot(x - o.x, z - o.z) > o.r + margen);
+    }
+    for (let i = 0, n = 0; i < 400 && n < 40; i++) {
+      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
+      if (libre(x, z, 2)) { arbol(x, z, 0.8 + rnd() * 0.6); n++; }
     }
 
-    // REGALO GIGANTE
-    const gift = new THREE.Group();
-    gift.position.set(0, .2, -3.5);
-    scene.add(gift);
-
-    box(2.65, .18, 2.65, colors.white, 0, .01, 0, gift);
-    const giftBody = new THREE.Group();
-    gift.add(giftBody);
-    box(2.25, 2.15, 2.25, colors.pink, 0, 1.2, 0, giftBody);
-    box(.39, 2.2, 2.29, colors.ribbon, 0, 1.2, 0, giftBody);
-    box(2.29, 2.2, .39, colors.ribbon, 0, 1.2, 0, giftBody);
-    box(2.48, .38, 2.48, colors.pink, 0, 2.4, 0, giftBody);
-    box(.42, .4, 2.5, colors.ribbon, 0, 2.41, 0, giftBody);
-    box(2.5, .4, .42, colors.ribbon, 0, 2.41, 0, giftBody);
-
-    for (const side of [-1, 1]) {
-      const bow = new THREE.Mesh(
-        new THREE.TorusGeometry(.42, .12, 8, 20), colors.ribbon
-      );
-      bow.position.set(side * .4, 2.9, 0);
-      bow.rotation.y = side * .25;
-      bow.rotation.z = side * -.4;
-      bow.scale.set(1.15, .8, 1);
-      giftBody.add(bow);
-    }
-    sphere(.2, colors.ribbon, 0, 2.77, 0, giftBody);
-
-    const marker = new THREE.Group();
-    marker.position.set(0, 4.2, -3.5);
-    scene.add(marker);
-    const arrow = new THREE.Mesh(new THREE.ConeGeometry(.24, .45, 4), colors.ribbon);
-    arrow.rotation.z = Math.PI;
-    marker.add(arrow);
-
-    // PERSONAJE DE BLOQUES
-    const player = new THREE.Group();
-    player.position.set(0, .17, 6.6);
-    scene.add(player);
-
-    const torso = box(.78, .85, .45, colors.shirt, 0, 1.18, 0, player);
-    box(.36, .26, .025, colors.ribbon, 0, 1.23, .24, player);
-    box(.66, .64, .62, colors.skin, 0, 1.93, 0, player);
-    box(.72, .18, .68, colors.dark, 0, 2.29, 0, player);
-    box(.17, .27, .65, colors.dark, -.28, 2.1, 0, player);
-
-    for (const x of [-.15, .15]) {
-      box(.065, .085, .025, colors.dark, x, 1.98, .32, player);
-    }
-    box(.17, .035, .025, colors.dark, 0, 1.79, .32, player);
-
-    function limb(x, y, w, h, material) {
-      const pivot = new THREE.Group();
-      pivot.position.set(x, y, 0);
-      player.add(pivot);
-      box(w, h, .38, material, 0, -h / 2, 0, pivot);
-      return pivot;
+    // Rocas
+    const gRoca = new T.DodecahedronGeometry(1, 0);
+    for (let i = 0, n = 0; i < 200 && n < 22; i++) {
+      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
+      if (!libre(x, z, 1.5)) continue;
+      const s = 0.4 + rnd() * 0.7;
+      const r = malla(gRoca, rnd() > .5 ? "#9097a6" : "#7d8494", x, s * 0.5, z);
+      r.material.flatShading = true;
+      r.scale.set(s, s * 0.75, s);
+      r.rotation.set(rnd(), rnd() * 3, rnd());
+      obstaculos.push({ x, z, r: s * 0.9 });
+      n++;
     }
 
-    const leftArm = limb(-.57, 1.55, .31, .79, colors.skin);
-    const rightArm = limb(.57, 1.55, .31, .79, colors.skin);
-    const leftLeg = limb(-.22, .79, .34, .62, colors.pants);
-    const rightLeg = limb(.22, .79, .34, .62, colors.pants);
-    box(.37, .2, .5, colors.white, 0, -.65, .05, leftLeg);
-    box(.37, .2, .5, colors.white, 0, -.65, .05, rightLeg);
+    // Flores
+    const gFlor = new T.BoxGeometry(0.18, 0.18, 0.18);
+    const gTallo = new T.BoxGeometry(0.05, 0.3, 0.05);
+    const coloresFlor = ["#ff8fb1", "#ffd86b", "#ffffff", "#b49bff", "#ff9a5a"];
+    for (let i = 0; i < 260; i++) {
+      const x = (rnd() * 2 - 1) * LIMITE, z = (rnd() * 2 - 1) * LIMITE;
+      if (Math.hypot(x, z) < 7 || Math.abs(x) < 1.6 || Math.abs(z) < 1.6) continue;
+      if (dentroDeCaja(x, z, 0.3)) continue;
 
-    // PARTÍCULAS
-    const particles = [];
-    const particleGeometry = new THREE.BoxGeometry(1, 1, 1);
-    const particleMats = [
-      colors.pink, colors.ribbon, colors.purple, colors.teal, colors.white
-    ];
+      malla(gTallo, "#4b8c3c", x, 0.15, z, false);
+      malla(gFlor, coloresFlor[i % coloresFlor.length], x, 0.34, z, false);
+    }
 
-    function burst(count, big = false) {
-      for (let i = 0; i < count; i++) {
-        const mesh = new THREE.Mesh(particleGeometry, particleMats[i % 5]);
-        const size = big ? .08 + Math.random() * .19 : .08;
-        mesh.scale.set(size, size * .65, size);
-        mesh.position.set(
-          gift.position.x + (Math.random() - .5),
-          1.6 + Math.random(),
-          gift.position.z + (Math.random() - .5)
-        );
-        scene.add(mesh);
-        particles.push({
-          mesh,
-          velocity: new THREE.Vector3(
-            (Math.random() - .5) * (big ? 10 : 4),
-            3 + Math.random() * (big ? 7 : 3),
-            (Math.random() - .5) * (big ? 10 : 4)
-          ),
-          life: big ? 3 : .8
-        });
+    // Muro perimetral
+    (function construirMuro() {
+      const ALTO = 8;
+      const GROSOR = 1.2;
+      const LADO = LIMITE * 2 + GROSOR;
+      const colorMuro = "#8a8478";
+      const colorRemate = "#6f6a60";
+
+      const paredes = [
+        { w: LADO, h: ALTO, d: GROSOR, x: 0, z: -LIMITE - GROSOR / 2 },
+        { w: LADO, h: ALTO, d: GROSOR, x: 0, z:  LIMITE + GROSOR / 2 },
+        { w: GROSOR, h: ALTO, d: LADO, x: -LIMITE - GROSOR / 2, z: 0 },
+        { w: GROSOR, h: ALTO, d: LADO, x:  LIMITE + GROSOR / 2, z: 0 },
+      ];
+
+      for (const p of paredes) {
+        const m = malla(new T.BoxGeometry(p.w, p.h, p.d), colorMuro, p.x, p.h / 2, p.z);
+        m.receiveShadow = true;
+        const remate = malla(new T.BoxGeometry(p.w + 0.15, 0.5, p.d + 0.15), colorRemate, p.x, p.h + 0.25, p.z);
+        remate.castShadow = true;
+
+        const largo = Math.max(p.w, p.d);
+        const pasos = Math.ceil(largo / 1.5);
+        const esHorizontal = p.w > p.d;
+        for (let i = 0; i <= pasos; i++) {
+          const t = i / pasos - 0.5;
+          obstaculos.push({
+            x: esHorizontal ? p.x + t * p.w : p.x,
+            z: esHorizontal ? p.z : p.z + t * p.d,
+            r: GROSOR * 0.6,
+          });
+        }
+      }
+    })();
+
+    // Nubes
+    const nubes = [];
+    const gNube = new T.BoxGeometry(1, 1, 1);
+    const matNube = new T.MeshStandardMaterial({ color: "#ffffff", roughness: 1 });
+    for (let i = 0; i < 14; i++) {
+      const g = new T.Group();
+      for (let j = 0; j < 4; j++) {
+        const b = new T.Mesh(gNube, matNube);
+        b.scale.set(3 + rnd() * 3, 1.2 + rnd(), 2 + rnd() * 2);
+        b.position.set(j * 2 - 3, rnd() * 0.8, rnd() * 1.5);
+        g.add(b);
+      }
+      g.position.set((rnd() * 2 - 1) * 70, 22 + rnd() * 8, (rnd() * 2 - 1) * 70);
+      escena.add(g);
+      nubes.push(g);
+    }
+
+    // ---------- Personaje del jugador ----------
+    const SALUD = CFG.salud || { max: 100, inicial: 50, umbralMedio: 0.5, umbralBajo: 0.25 };
+    const jugador = {
+      pos: new T.Vector3(0, 0, 8),
+      rot: Math.PI,
+      vy: 0,
+      enAire: false,
+      aterrizando: 0,
+      fuerzaAterrizaje: 0,
+      salud: SALUD.inicial,
+      saludMax: SALUD.max,
+      modelo: null,
+      ficha: null,
+      carga: null,
+      // Modo mover cajas grandes
+      moviendo: null,       // referencia a la caja que se está moviendo
+      moverT: 0,            // temporizador de la animación
+      moverDir: 0,          // -1 hacia atrás, +1 hacia adelante
+      moverDesde: null,     // posición inicial de la caja
+      moverHasta: null,     // posición destino
+    };
+
+    // ---------- Barra de salud ----------
+    function actualizarSalud() {
+      const r = jugador.salud / jugador.saludMax;
+      const el = $("salud");
+      $("saludRelleno").style.width = (r * 100) + "%";
+      $("saludTxt").textContent = `${Math.round(jugador.salud)} / ${jugador.saludMax}`;
+      el.classList.toggle("media", r < SALUD.umbralMedio && r >= SALUD.umbralBajo);
+      el.classList.toggle("baja", r < SALUD.umbralBajo);
+      el.setAttribute("aria-valuemax", jugador.saludMax);
+      el.setAttribute("aria-valuenow", Math.round(jugador.salud));
+    }
+    function setSalud(v) {
+      jugador.salud = T.MathUtils.clamp(v, 0, jugador.saludMax);
+      actualizarSalud();
+    }
+    window.Jugador = {
+      get salud() { return jugador.salud; },
+      setSalud,
+      danar: n => setSalud(jugador.salud - n),
+      curar: n => setSalud(jugador.salud + n),
+    };
+    actualizarSalud();
+
+    function equipar(id, avisar) {
+      const ficha = SKINS.find(s => s.id === id) || SKINS[0];
+      if (jugador.modelo) {
+        escena.remove(jugador.modelo.raiz);
+        jugador.modelo.destruir();
+      }
+      jugador.ficha = ficha;
+      jugador.modelo = crearPersonaje(T, ficha);
+      jugador.modelo.raiz.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      escena.add(jugador.modelo.raiz);
+      localStorage.setItem(CFG.defaults.storageSkin, ficha.id);
+      document.querySelectorAll(".skin").forEach(b => b.classList.toggle("sel", b.dataset.id === ficha.id));
+      if (avisar) toast(`Skin equipada: ${ficha.nombre}`);
+    }
+
+    // ---------- Miniaturas de las skins ----------
+    const miniaturas = new Map();
+    (function generarMiniaturas() {
+      const r = new T.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+      r.setSize(260, 236, false);
+      r.outputColorSpace = T.SRGBColorSpace;
+      r.toneMapping = T.ACESFilmicToneMapping;
+      r.toneMappingExposure = 1.2;
+      const e = new T.Scene();
+      e.add(new T.HemisphereLight("#edf3ff", "#596080", 2.5));
+      const l = new T.DirectionalLight("#fff0dc", 3.4); l.position.set(4, 7, 5); e.add(l);
+      const b = new T.DirectionalLight("#a5bcff", 2.2); b.position.set(-4, 3, -4); e.add(b);
+      const c = new T.PerspectiveCamera(38, 260 / 236, 0.1, 50);
+      c.position.set(3.2, 2.75, 5.7); c.lookAt(0, 1.58, 0);
+      for (const ficha of SKINS) {
+        const m = crearPersonaje(T, ficha);
+        e.add(m.raiz);
+        r.render(e, c);
+        miniaturas.set(ficha.id, r.domElement.toDataURL("image/png"));
+        e.remove(m.raiz);
+        m.destruir();
+      }
+      r.dispose();
+      r.forceContextLoss && r.forceContextLoss();
+    })();
+
+    // ---------- Interfaz: perfil ----------
+    const modal = $("modal");
+    let perfilAbierto = false;
+
+    for (const ficha of SKINS) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "skin"; b.dataset.id = ficha.id;
+      b.innerHTML = `<span class="badge">EQUIPADA</span><img alt=""><div class="info">
+        <strong></strong><small></small><p></p></div>`;
+      b.querySelector("img").src = miniaturas.get(ficha.id);
+      b.querySelector("strong").textContent = ficha.nombre;
+      b.querySelector("small").textContent = ficha.categoria;
+      b.querySelector("p").textContent = ficha.descripcion;
+      b.addEventListener("click", () => { if (ficha.id !== jugador.ficha.id) equipar(ficha.id, true); });
+      $("skins").appendChild(b);
+    }
+
+    const nombreGuardado = localStorage.getItem(CFG.defaults.storageNombre) || CFG.defaults.nombre;
+    $("nombreJugador").value = nombreGuardado;
+    $("nombreJugador").addEventListener("input", e => {
+      const n = e.target.value.trim() || CFG.defaults.nombre;
+      localStorage.setItem(CFG.defaults.storageNombre, n);
+    });
+
+    function abrirPerfil() { perfilAbierto = true; modal.classList.add("abierto"); teclas.clear(); }
+    function cerrarPerfil() { perfilAbierto = false; modal.classList.remove("abierto"); renderer.domElement.focus?.(); }
+    $("abrirPerfil").addEventListener("click", abrirPerfil);
+    $("cerrarPerfil").addEventListener("click", cerrarPerfil);
+    $("guardar").addEventListener("click", cerrarPerfil);
+    modal.addEventListener("click", e => { if (e.target === modal) cerrarPerfil(); });
+
+    // ---------- Interfaz: mochila ----------
+    function abrirMochila() {
+      toast("Mochila: inventario próximamente");
+    }
+    $("abrirMochila").addEventListener("click", abrirMochila);
+
+    let toastT;
+    function toast(txt) {
+      const t = $("toast");
+      t.textContent = txt; t.classList.add("ver");
+      clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("ver"), 1800);
+    }
+
+    // ---------- Acciones ----------
+    let unica = null;
+    let emote = null;
+    const botones = new Map();
+
+    function ejecutar(acc) {
+      if (jugador.carga || jugador.moviendo) return;
+      if (acc.tipo === "unica") {
+        if (unica) return;
+        emote = null;
+        unica = { anim: acc.anim, t: 0, dur: acc.dur };
+      } else {
+        unica = null;
+        emote = emote === acc.anim ? null : acc.anim;
       }
     }
 
-    // ESTADO Y CONTROLES
-    let playing = false, opened = false, modal = false, hits = 0;
-    let hitCooldown = 0, shake = 0, punch = 0, walkTime = 0, stepTimer = 0;
-    let inviteTimer;
-    const keys = new Set();
-    const joystick = new THREE.Vector2();
-    const input = new THREE.Vector2();
-    const direction = new THREE.Vector3();
-
-    function clearInput() {
-      keys.clear();
-      joystick.set(0, 0);
-      $("stick").style.transform = "";
+    for (const acc of ACCIONES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.innerHTML = `<span class="em">${acc.em}</span>${acc.label}<kbd>${acc.kbd}</kbd>`;
+      b.addEventListener("click", () => ejecutar(acc));
+      botones.set(acc.anim, b);
+      $("acciones").appendChild(b);
     }
 
-    window.addEventListener("blur", clearInput);
-    document.addEventListener("visibilitychange", () => {
-      clearInput();
-      if (audio && document.hidden) audio.suspend();
-      else if (audio && playing) audio.resume();
-    });
-
-    window.addEventListener("keydown", e => {
-      const codes = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
-        "KeyW", "KeyA", "KeyS", "KeyD", "Space"];
-      if (!playing || modal || !codes.includes(e.code)) return;
-      e.preventDefault();
-      keys.add(e.code);
-      if (e.code === "Space" && !e.repeat) hitGift();
-    });
-
-    window.addEventListener("keyup", e => keys.delete(e.code));
-
-    let pointerId = null;
-    $("joystick").addEventListener("pointerdown", e => {
-      if (pointerId !== null) return;
-      pointerId = e.pointerId;
-      $("joystick").setPointerCapture(e.pointerId);
-      updateStick(e);
-    });
-
-    $("joystick").addEventListener("pointermove", e => {
-      if (e.pointerId === pointerId) updateStick(e);
-    });
-
-    function updateStick(e) {
-      const rect = $("joystick").getBoundingClientRect();
-      joystick.set(
-        (e.clientX - rect.left - rect.width / 2) / 38,
-        (e.clientY - rect.top - rect.height / 2) / 38
-      ).clampLength(0, 1);
-      $("stick").style.transform =
-        `translate(${joystick.x * 34}px, ${joystick.y * 34}px)`;
+    // ---------- Salto físico ----------
+    function intentarSalto() {
+      if (jugador.enAire || jugador.carga || jugador.moviendo) return;
+      jugador.vy = CFG.salto.impulso;
+      jugador.enAire = true;
+      if (window.AudioJuego && AudioJuego.listo) AudioJuego.salto();
     }
 
-    function releaseStick(e) {
-      if (e.pointerId !== pointerId) return;
-      pointerId = null;
-      joystick.set(0, 0);
-      $("stick").style.transform = "";
-    }
+    // ---------- Agarrar / Soltar / Lanzar ----------
+    const frente = () => ({ fx: Math.sin(jugador.rot), fz: Math.cos(jugador.rot) });
+    const distCarga = c => R_JUG + c.tam / 2 + 0.1;
 
-    $("joystick").addEventListener("pointerup", releaseStick);
-    $("joystick").addEventListener("pointercancel", releaseStick);
-    $("joystick").addEventListener("lostpointercapture", releaseStick);
-
-    $("hit").addEventListener("pointerdown", e => {
-      e.preventDefault();
-      hitGift();
-    });
-
-    $("start").onclick = () => {
-      initAudio();
-      playing = true;
-      $("welcome").style.display = "none";
-    };
-
-    function showInvite() {
-      modal = true;
-      clearInput();
-      $("invite").style.display = "grid";
-      $("hit").style.display = "none";
-      $("back").focus();
-    }
-
-    $("back").onclick = () => {
-      modal = false;
-      $("invite").style.display = "none";
-      $("reopen").style.display = "block";
-      $("hint").style.display = "none";
-    };
-    $("reopen").onclick = showInvite;
-
-    // Mantiene el foco dentro de la invitación.
-    $("invite").addEventListener("keydown", e => {
-      if (e.key !== "Tab") return;
-      const focusable = [...$("invite").querySelectorAll("a,button")]
-        .filter(el => el.offsetParent !== null);
-      const first = focusable[0], last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault(); last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault(); first.focus();
+    function cajaCercana() {
+      if (jugador.enAire || jugador.carga || jugador.moviendo) return null;
+      const { fx, fz } = frente();
+      let mejor = null, mejorScore = Infinity;
+      for (const c of cajas) {
+        if (c.estado !== "suelo" || !c.tipo.agarrable) continue;
+        const h = c.tam / 2;
+        if (jugador.pos.y >= c.pos.y + c.tam - 0.1 &&
+            Math.abs(jugador.pos.x - c.pos.x) < h + 0.2 &&
+            Math.abs(jugador.pos.z - c.pos.z) < h + 0.2) continue;
+        if (Math.abs(c.pos.y - jugador.pos.y) > 1.2) continue;
+        const dx = c.pos.x - jugador.pos.x, dz = c.pos.z - jugador.pos.z;
+        const dc = Math.hypot(dx, dz);
+        const borde = dc - h;
+        if (borde > CAJ.distanciaAgarre) continue;
+        const alineado = (dx * fx + dz * fz) / (dc || 1);
+        const score = borde - alineado * 0.5;
+        if (score < mejorScore) { mejorScore = score; mejor = c; }
       }
-    });
-
-    function giftDistance() {
-      return Math.hypot(
-        player.position.x - gift.position.x,
-        player.position.z - gift.position.z
-      );
+      return mejor;
     }
 
-    function hitGift() {
-      if (!playing || modal || opened || hitCooldown > 0 || giftDistance() > 3) return;
-      initAudio();
-      hitCooldown = .48;
-      punch = .3;
-      shake = .35;
-      player.rotation.y = Math.atan2(
-        gift.position.x - player.position.x,
-        gift.position.z - player.position.z
-      );
-      hits++;
-      document.querySelectorAll(".dot").forEach((el, i) => {
-        el.classList.toggle("on", i < hits);
+    function cajaGrandeCercana() {
+      if (jugador.enAire || jugador.carga || jugador.moviendo) return null;
+      const { fx, fz } = frente();
+      let mejor = null, mejorScore = Infinity;
+      for (const c of cajas) {
+        if (c.estado !== "suelo" || !c.tipo.movible) continue;
+        const h = c.tam / 2;
+        if (Math.abs(c.pos.y - jugador.pos.y) > 1.2) continue;
+        const dx = c.pos.x - jugador.pos.x, dz = c.pos.z - jugador.pos.z;
+        const dc = Math.hypot(dx, dz);
+        const borde = dc - h;
+        if (borde > CAJ.distanciaAgarre + 0.2) continue;
+        const alineado = (dx * fx + dz * fz) / (dc || 1);
+        const score = borde - alineado * 0.6;
+        if (score < mejorScore) { mejorScore = score; mejor = c; }
+      }
+      return mejor;
+    }
+
+    function actualizarBotonesCarga() {
+      const cargando = !!jugador.carga;
+      const moviendo = !!jugador.moviendo;
+      const b = $("btnAgarrar");
+      b.textContent = cargando ? CFG.botonAgarrar.labelSoltar : CFG.botonAgarrar.label;
+      b.classList.toggle("cargando", cargando);
+      $("btnLanzar").classList.toggle("oculto", !cargando);
+
+      const bM = $("btnMover");
+      bM.textContent = moviendo ? CFG.botonMover.labelDejar : CFG.botonMover.label;
+      bM.classList.toggle("moviendo", moviendo);
+      // Ocultar botones de salto/ataque/lanzar durante el modo mover
+      const ocultarPorMover = moviendo;
+      $("btnSaltar").classList.toggle("oculto", ocultarPorMover);
+      $("btnAtacar").classList.toggle("oculto", ocultarPorMover);
+      $("btnLanzar").classList.toggle("oculto", ocultarPorMover || !cargando);
+      $("acciones").classList.toggle("oculto", ocultarPorMover);
+    }
+
+    function agarrar() {
+      if (jugador.moviendo) return;
+      if (jugador.carga) { soltar(); return; }
+      if (unica || jugador.enAire) return;
+      const c = cajaCercana();
+      if (!c) { toast("No hay ninguna caja cerca para agarrar"); return; }
+      c.estado = "cargada";
+      c.vel.set(0, 0, 0);
+      jugador.carga = c;
+      emote = null;
+      unica = { anim: "Agarrar (objeto)", t: 0, dur: 0.25 };
+      actualizarBotonesCarga();
+    }
+
+    function liberarCaja(c) {
+      c.estado = "vuelo";
+      c.malla.rotation.y = Math.round(jugador.rot / (Math.PI / 2)) * (Math.PI / 2);
+      jugador.carga = null;
+      actualizarBotonesCarga();
+    }
+
+    function soltar() {
+      const c = jugador.carga;
+      if (!c) return;
+      const { fx, fz } = frente();
+      const d = R_JUG + c.tam / 2 + 0.05;
+      const p = { x: jugador.pos.x + fx * d, z: jugador.pos.z + fz * d };
+      fueraDeObstaculos(p, c.tam / 2);
+      c.pos.set(p.x, jugador.pos.y + 0.05, p.z);
+      c.vel.set(0, 0, 0);
+      liberarCaja(c);
+    }
+
+    function lanzar() {
+      if (jugador.moviendo) return;
+      const c = jugador.carga;
+      if (!c) return;
+      const { fx, fz } = frente();
+      const d0 = distCarga(c);
+      const tx = jugador.pos.x + fx * CAJ.distanciaLanzar;
+      const tz = jugador.pos.z + fz * CAJ.distanciaLanzar;
+      const yObj = alturaApoyo(tx, tz, c.tam * 0.45, c);
+      const g = CAJ.gravedad, vy = CAJ.impulsoLanzarY;
+      const disc = vy * vy - 2 * g * (c.pos.y - yObj);
+      const t = (-vy - Math.sqrt(Math.max(0, disc))) / g;
+      const vh = Math.max(0, CAJ.distanciaLanzar - d0) / Math.max(0.1, t);
+      c.vel.set(fx * vh, vy, fz * vh);
+      liberarCaja(c);
+      unica = { anim: "Atacar (golpe de puño)", t: 0, dur: 0.25 };
+    }
+
+    // ---------- Mover cajas grandes ----------
+    function moverCaja() {
+      // Si ya está moviendo, la acción del botón es "DEJAR" (terminar)
+      if (jugador.moviendo) {
+        terminarMover();
+        return;
+      }
+      if (jugador.carga || jugador.enAire) return;
+      const c = cajaGrandeCercana();
+      if (!c) { toast("No hay ninguna caja grande cerca para mover"); return; }
+      // Entrar en modo mover (aún no se ha desplazado)
+      jugador.moviendo = c;
+      jugador.moverT = 0;
+      jugador.moverDir = 0;
+      jugador.moverDesde = c.pos.clone();
+      jugador.moverHasta = c.pos.clone();
+      emote = null;
+      unica = null;
+      actualizarBotonesCarga();
+      toast("Modo mover: usa W/S para empujar, M para dejar");
+    }
+
+    // Empuja la caja una casilla hacia adelante (+1) o atrás (-1)
+    function empujarCaja(dir) {
+      const c = jugador.moviendo;
+      if (!c || jugador.moverDir !== 0) return;
+      const { fx, fz } = frente();
+      const d = CAJ.mover.distancia;
+      const destino = {
+        x: c.pos.x + fx * d * dir,
+        z: c.pos.z + fz * d * dir,
+      };
+      // Comprobar que el destino no colisiona con obstáculos ni otras cajas
+      const h = c.tam / 2;
+      if (Math.abs(destino.x) > LIMITE - h || Math.abs(destino.z) > LIMITE - h) {
+        toast("No hay espacio para mover la caja");
+        return;
+      }
+      let bloqueado = false;
+      for (const o of obstaculos) {
+        if (Math.hypot(destino.x - o.x, destino.z - o.z) < o.r + h * 0.9) { bloqueado = true; break; }
+      }
+      if (!bloqueado) {
+        for (const otra of cajas) {
+          if (otra === c || otra.estado !== "suelo") continue;
+          const solapa = Math.abs(destino.x - otra.pos.x) < (otra.tam + c.tam) / 2 * 0.95 &&
+                         Math.abs(destino.z - otra.pos.z) < (otra.tam + c.tam) / 2 * 0.95;
+          if (solapa) { bloqueado = true; break; }
+        }
+      }
+      if (bloqueado) { toast("No hay espacio para mover la caja"); return; }
+
+      // Verificar que el jugador no quede dentro de la caja al empujarla
+      const pJug = { x: jugador.pos.x, z: jugador.pos.z };
+      // (El jugador se queda donde está; si la caja se aleja, no hay problema.
+      //  Si se acerca, la colisión de cajas lo empujará fuera.)
+
+      jugador.moverDesde = c.pos.clone();
+      jugador.moverHasta = new T.Vector3(destino.x, c.pos.y, destino.z);
+      jugador.moverDir = dir;
+      jugador.moverT = 0;
+    }
+
+    function terminarMover() {
+      if (!jugador.moviendo) return;
+      jugador.moviendo = null;
+      jugador.moverDir = 0;
+      jugador.moverT = 0;
+      jugador.moverDesde = null;
+      jugador.moverHasta = null;
+      actualizarBotonesCarga();
+    }
+
+    function actualizarMover(dt) {
+      const c = jugador.moviendo;
+      if (!c) return;
+      // Si la caja dejó de estar en el suelo (por ejemplo empujada al vacío), terminar
+      if (c.estado !== "suelo") { terminarMover(); return; }
+      // Desplazamiento suave
+      if (jugador.moverDir !== 0) {
+        jugador.moverT += dt;
+        const k = Math.min(1, jugador.moverT / CAJ.mover.duracion);
+        const e = 1 - Math.pow(1 - k, 3); // ease-out cúbico
+        c.pos.x = T.MathUtils.lerp(jugador.moverDesde.x, jugador.moverHasta.x, e);
+        c.pos.z = T.MathUtils.lerp(jugador.moverDesde.z, jugador.moverHasta.z, e);
+        sincronizarCaja(c);
+        if (k >= 1) {
+          c.pos.copy(jugador.moverHasta);
+          sincronizarCaja(c);
+          jugador.moverDir = 0;
+          jugador.moverDesde = c.pos.clone();
+          jugador.moverHasta = c.pos.clone();
+        }
+      }
+    }
+
+    function actualizarCajas(dt) {
+      for (const c of cajas) {
+        if (c.estado === "cargada") {
+          const { fx, fz } = frente();
+          const d = distCarga(c);
+          c.pos.set(jugador.pos.x + fx * d,
+                    jugador.pos.y + CAJ.alturaCarga - c.tam / 2,
+                    jugador.pos.z + fz * d);
+          sincronizarCaja(c);
+          c.malla.rotation.y = jugador.rot;
+          continue;
+        }
+        if (c === jugador.moviendo) continue; // lo gestiona actualizarMover
+        if (c.estado === "suelo" && c.pos.y > alturaApoyo(c.pos.x, c.pos.z, c.tam * 0.45, c) + 0.01) {
+          c.estado = "vuelo";
+        }
+        if (c.estado !== "vuelo") continue;
+
+        const px = c.pos.x, pz = c.pos.z;
+        c.vel.y = Math.max(c.vel.y + CAJ.gravedad * dt, -20);
+        c.pos.addScaledVector(c.vel, dt);
+        if (chocaLateral(c)) { c.pos.x = px; c.pos.z = pz; c.vel.x = c.vel.z = 0; }
+
+        const ap = alturaApoyo(c.pos.x, c.pos.z, c.tam * 0.45, c);
+        if (c.pos.y <= ap && c.vel.y <= 0) {
+          const fuerte = c.vel.y < -4;
+          c.pos.y = ap;
+          c.vel.set(0, 0, 0);
+          c.estado = "suelo";
+          if (fuerte && window.AudioJuego && AudioJuego.listo) AudioJuego.paso({ corriendo: false });
+        }
+        sincronizarCaja(c);
+      }
+    }
+
+    // ---------- Entrada: teclado ----------
+    const teclas = new Set();
+    addEventListener("keydown", e => {
+      if (perfilAbierto) { if (e.key === "Escape") cerrarPerfil(); return; }
+      if (e.target.tagName === "INPUT") return;
+      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) e.preventDefault();
+      teclas.add(e.code);
+      if (e.repeat) return;
+
+      // Modo mover: W/S empujan la caja
+      if (jugador.moviendo) {
+        if (e.code === "KeyW" || e.code === "ArrowUp") { empujarCaja(1); return; }
+        if (e.code === "KeyS" || e.code === "ArrowDown") { empujarCaja(-1); return; }
+        if (e.code === CFG.teclas.mover) { terminarMover(); return; }
+        return; // el resto de teclas se ignoran durante el modo mover
+      }
+
+      if (e.code === CFG.teclas.saltar) { intentarSalto(); return; }
+      if (e.code === CFG.teclas.agarrar) { agarrar(); return; }
+      if (e.code === CFG.teclas.lanzar)  { lanzar();  return; }
+      if (e.code === CFG.teclas.mover)   { moverCaja(); return; }
+      if (e.code === CFG.teclas.perfil) { abrirPerfil(); return; }
+      if (e.code === CFG.teclas.mochila) { abrirMochila(); return; }
+
+      const acc = ACCIONES.find(a => a.tecla === e.code);
+      if (acc) ejecutar(acc);
+    });
+    addEventListener("keyup", e => teclas.delete(e.code));
+    addEventListener("blur", () => teclas.clear());
+
+    // ---------- Entrada: joystick móvil ----------
+    const joy = { x: 0, y: 0, id: null };
+    let correrMovil = false;
+    const joyEl = $("joy"), knob = joyEl.querySelector(".knob");
+    function moverJoy(e) {
+      const r = joyEl.getBoundingClientRect();
+      let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const max = r.width / 2, d = Math.hypot(dx, dy);
+      if (d > max) { dx *= max / d; dy *= max / d; }
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      joy.x = dx / max; joy.y = -dy / max;
+    }
+    joyEl.addEventListener("pointerdown", e => { joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moverJoy(e); });
+    joyEl.addEventListener("pointermove", e => { if (e.pointerId === joy.id) moverJoy(e); });
+    for (const ev of ["pointerup", "pointercancel"]) {
+      joyEl.addEventListener(ev, () => { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ""; });
+    }
+
+    // Botones físicos (multitáctil)
+    function botonFisico(el, accion) {
+      el.tabIndex = -1;
+      el.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        e.stopPropagation();
+        accion();
       });
-      $("missionText").textContent = `${hits} de 3 golpes. ¡Ya casi!`;
-      tone(170 + hits * 55, .13, effectsBus, "triangle");
-      burst(reduced ? 6 : 18);
-
-      if (hits === 3) {
-        opened = true;
-        giftBody.visible = false;
-        marker.visible = false;
-        burst(reduced ? 25 : 150, true);
-        openingSound();
-        $("missionTitle").textContent = "¡Sorpresa desbloqueada!";
-        $("missionText").textContent = "Esta aventura recién empieza.";
-        $("hint").textContent = "¡Lo lograste! 🎉";
-        $("hit").style.display = "none";
-        inviteTimer = setTimeout(showInvite, 1100);
-      }
+      el.addEventListener("click", e => e.preventDefault());
     }
 
-    function blocked(x, z) {
-      if (Math.abs(x) > 9.5 || Math.abs(z) > 8.3) return true;
-      if (!opened &&
-          Math.abs(x - gift.position.x) < 1.65 &&
-          Math.abs(z - gift.position.z) < 1.65) return true;
-      return obstacles.some(o => Math.hypot(x - o.x, z - o.z) < o.r + .4);
-    }
+    botonFisico($("btnSaltar"), intentarSalto);
+    const accionAtacar = ACCIONES.find(a => a.tipo === "unica");
+    botonFisico($("btnAtacar"), () => { if (accionAtacar) ejecutar(accionAtacar); });
+    botonFisico($("btnAgarrar"), agarrar);
+    botonFisico($("btnLanzar"), lanzar);
+    botonFisico($("btnMover"), moverCaja);
+    $("btnAgarrar").textContent = CFG.botonAgarrar.label;
+    $("btnLanzar").textContent = CFG.botonLanzar.label;
+    $("btnMover").textContent = CFG.botonMover.label;
 
-    const clock = new THREE.Clock();
-    const cameraTarget = new THREE.Vector3();
-    const lookTarget = new THREE.Vector3();
-    camera.position.set(0, 12, 18);
-
-    function animate() {
-      requestAnimationFrame(animate);
-      const dt = Math.min(clock.getDelta(), .05);
-      const elapsed = clock.elapsedTime;
-      hitCooldown = Math.max(0, hitCooldown - dt);
-      punch = Math.max(0, punch - dt);
-
-      if (playing && !modal) {
-        input.set(
-          Number(keys.has("KeyD") || keys.has("ArrowRight")) -
-          Number(keys.has("KeyA") || keys.has("ArrowLeft")) + joystick.x,
-          Number(keys.has("KeyS") || keys.has("ArrowDown")) -
-          Number(keys.has("KeyW") || keys.has("ArrowUp")) + joystick.y
-        ).clampLength(0, 1);
-
-        if (input.length() < .12) input.set(0, 0);
-        direction.set(input.x, 0, input.y);
-
-        const oldX = player.position.x, oldZ = player.position.z;
-        const nx = oldX + direction.x * 4.4 * dt;
-        if (!blocked(nx, oldZ)) player.position.x = nx;
-        const nz = oldZ + direction.z * 4.4 * dt;
-        if (!blocked(player.position.x, nz)) player.position.z = nz;
-
-        const moving = Math.hypot(
-          player.position.x - oldX, player.position.z - oldZ
-        ) > .001;
-
-        if (moving) {
-          walkTime += dt * 12;
-          if (punch === 0) {
-            const angle = Math.atan2(direction.x, direction.z);
-            const diff = Math.atan2(
-              Math.sin(angle - player.rotation.y),
-              Math.cos(angle - player.rotation.y)
-            );
-            player.rotation.y += diff * Math.min(1, dt * 16);
-          }
-          stepTimer -= dt;
-          if (stepTimer <= 0) {
-            stepSound();
-            stepTimer = .32;
-          }
-        } else {
-          stepTimer = 0;
-        }
-
-        const swing = moving ? Math.sin(walkTime) * .65 : 0;
-        leftLeg.rotation.x = swing;
-        rightLeg.rotation.x = -swing;
-        leftArm.rotation.x = -swing;
-        rightArm.rotation.x = punch > 0
-          ? -Math.sin(punch / .3 * Math.PI) * 1.9 : swing;
-        player.position.y = .17 + (moving && !reduced
-          ? Math.abs(Math.sin(walkTime)) * .055 : 0);
-
-        if (!opened) {
-          const nearby = giftDistance() < 3;
-          $("hit").style.display = nearby ? "block" : "none";
-          $("hint").textContent = nearby
-            ? "¡Encontraste el regalo! Dale 3 golpes 👊"
-            : coarse
-              ? "Mueve la palanca y busca el regalo gigante 🎁"
-              : "WASD o flechas para caminar · Espacio para golpear";
-        }
-      }
-
-      if (!opened && !reduced) {
-        marker.position.y = 4.2 + Math.sin(elapsed * 3) * .2;
-        marker.rotation.y += dt;
-        if (shake > 0) {
-          shake -= dt;
-          giftBody.rotation.z = Math.sin(elapsed * 55) * shake * .3;
-          giftBody.rotation.x = Math.cos(elapsed * 43) * shake * .2;
-        } else {
-          giftBody.rotation.set(0, 0, Math.sin(elapsed * 1.8) * .025);
-        }
-      }
-
-      if (!reduced) balloons.forEach(b => {
-        b.mesh.position.y = b.y + Math.sin(elapsed * 1.5 + b.phase) * .08;
-      });
-
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.life -= dt;
-        p.velocity.y -= 12 * dt;
-        p.mesh.position.addScaledVector(p.velocity, dt);
-        p.mesh.rotation.x += dt * 4;
-        p.mesh.rotation.z += dt * 3;
-        if (p.mesh.position.y < .25) {
-          p.mesh.position.y = .25;
-          p.velocity.y = Math.abs(p.velocity.y) * .28;
-          p.velocity.x *= .91;
-          p.velocity.z *= .91;
-        }
-        if (p.life < .4) p.mesh.scale.multiplyScalar(Math.exp(-dt * 7));
-        if (p.life <= 0) {
-          scene.remove(p.mesh);
-          particles.splice(i, 1);
-        }
-      }
-
-      const portrait = innerWidth < innerHeight;
-      cameraTarget.set(
-        player.position.x * .55,
-        portrait ? 15 : 12,
-        player.position.z * .55 + (portrait ? 17 : 14)
-      );
-      camera.position.lerp(cameraTarget, 1 - Math.exp(-dt * 4));
-      lookTarget.set(player.position.x * .65, .5, player.position.z * .65 - 1.4);
-      camera.lookAt(lookTarget);
-      renderer.render(scene, camera);
-    }
-
-    window.addEventListener("resize", () => {
-      camera.aspect = innerWidth / innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(innerWidth, innerHeight);
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    botonFisico($("btnCorrer"), () => {
+      correrMovil = !correrMovil;
+      $("btnCorrer").classList.toggle("activo", correrMovil);
     });
 
-    animate();
+    // ---------- Cámara orbital ----------
+    let yaw = 0, pitch = 0.42, dist = 9;
+    let arrastre = null;
+    const lienzo = renderer.domElement;
+    lienzo.addEventListener("pointerdown", e => { arrastre = { x: e.clientX, y: e.clientY, id: e.pointerId }; lienzo.setPointerCapture(e.pointerId); });
+    lienzo.addEventListener("pointermove", e => {
+      if (!arrastre || arrastre.id !== e.pointerId) return;
+      yaw -= (e.clientX - arrastre.x) * 0.008;
+      pitch = T.MathUtils.clamp(pitch + (e.clientY - arrastre.y) * 0.005, 0.08, 1.2);
+      arrastre.x = e.clientX; arrastre.y = e.clientY;
+    });
+    for (const ev of ["pointerup", "pointercancel"]) {
+      lienzo.addEventListener(ev, e => {
+        if (arrastre && arrastre.id === e.pointerId) arrastre = null;
+      });
+    }
+    lienzo.addEventListener("wheel", e => {
+      e.preventDefault();
+      dist = T.MathUtils.clamp(dist + e.deltaY * 0.01, 4.5, 18);
+    }, { passive: false });
+
+    const foco = new T.Vector3();
+    function actualizarCamara(dt) {
+      const objetivo = new T.Vector3(jugador.pos.x, 1.5 + jugador.pos.y, jugador.pos.z);
+      foco.lerp(objetivo, 1 - Math.exp(-dt * 10));
+      camara.position.set(
+        foco.x + Math.sin(yaw) * Math.cos(pitch) * dist,
+        foco.y + Math.sin(pitch) * dist,
+        foco.z + Math.cos(yaw) * Math.cos(pitch) * dist
+      );
+      camara.lookAt(foco);
+    }
+
+    function redimensionar() {
+      renderer.setSize(innerWidth, innerHeight, false);
+      camara.aspect = innerWidth / innerHeight;
+      camara.updateProjectionMatrix();
+    }
+    addEventListener("resize", redimensionar);
+    redimensionar();
+
+    // ---------- Bucle principal ----------
+    let animActual = "", tAnim = 0, reloj = 0, pasoAcum = 0;
+
+    function colisiones(p) {
+      const R = 0.6;
+      for (const o of obstaculos) {
+        const dx = p.x - o.x, dz = p.z - o.z, d = Math.hypot(dx, dz), min = o.r + R;
+        if (d < min && d > 0.0001) { p.x = o.x + dx / d * min; p.z = o.z + dz / d * min; }
+      }
+      p.x = T.MathUtils.clamp(p.x, -LIMITE, LIMITE);
+      p.z = T.MathUtils.clamp(p.z, -LIMITE, LIMITE);
+    }
+
+    function actualizarIndicadores() {
+      // Indicador de agarre (cajas pequeñas/medianas)
+      const cAgarrar = cajaCercana();
+      if (cAgarrar) {
+        indicadorAgarre.position.set(cAgarrar.pos.x, cAgarrar.pos.y + cAgarrar.tam + 0.35, cAgarrar.pos.z);
+        indicadorAgarre.visible = true;
+        indicadorAgarre.children[0].material.color.setHex(0xc4ff83);
+        indicadorAgarre.children[1].material.color.setHex(0xc4ff83);
+      } else {
+        indicadorAgarre.visible = false;
+      }
+
+      // Indicador de mover (cajas grandes) — solo si no hay una caja agarrable más prioritaria
+      const cMover = (!cAgarrar && !jugador.carga && !jugador.moviendo) ? cajaGrandeCercana() : null;
+      if (cMover) {
+        indicadorMover.position.set(cMover.pos.x, cMover.pos.y + cMover.tam + 0.45, cMover.pos.z);
+        indicadorMover.visible = true;
+      } else {
+        indicadorMover.visible = false;
+      }
+    }
+
+    function actualizar(dt) {
+      reloj += dt;
+
+      // --- Modo mover: si está activo, solo se gestiona el empuje ---
+      if (jugador.moviendo) {
+        actualizarMover(dt);
+        // Movimiento del jugador deshabilitado en modo mover (solo W/S empujan)
+        // La cámara sigue al jugador igualmente.
+        // Animación: usa "Agacharse" o "Empujar" — usamos "Agacharse" como pose de esfuerzo
+        const m = jugador.modelo;
+        m.animar(reloj, "Agacharse");
+        m.raiz.position.copy(jugador.pos);
+        m.raiz.rotation.y = jugador.rot;
+        m.raiz.scale.set(1, 1, 1);
+        actualizarIndicadores();
+        actualizarCajas(dt);
+        cristal.rotation.y += dt * 1.2;
+        cristal.position.y = 3.2 + Math.sin(reloj * 2) * 0.2;
+        aro.material.emissiveIntensity = 0.4 + Math.sin(reloj * 2.5) * 0.25;
+        for (const n of nubes) {
+          n.position.x += dt * 0.8;
+          if (n.position.x > 80) n.position.x = -80;
+        }
+        sol.position.set(jugador.pos.x + 12, 22, jugador.pos.z + 8);
+        sol.target.position.copy(jugador.pos);
+        actualizarCamara(dt);
+        return;
+      }
+
+      // --- Input ---
+      let ix = 0, iz = 0;
+      if (teclas.has("KeyW") || teclas.has("ArrowUp")) iz += 1;
+      if (teclas.has("KeyS") || teclas.has("ArrowDown")) iz -= 1;
+      if (teclas.has("KeyD") || teclas.has("ArrowRight")) ix += 1;
+      if (teclas.has("KeyA") || teclas.has("ArrowLeft")) ix -= 1;
+      ix += joy.x; iz += joy.y;
+      const mag = Math.hypot(ix, iz);
+      if (mag > 1) { ix /= mag; iz /= mag; }
+      const moviendo = mag > 0.12;
+      const corriendo = moviendo && (
+        teclas.has("ShiftLeft") || teclas.has("ShiftRight") || correrMovil
+      );
+
+      if (moviendo && emote) emote = null;
+
+      // --- Movimiento horizontal ---
+      if (moviendo) {
+        const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+        const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+        let mx = fx * iz + rx * ix, mz = fz * iz + rz * ix;
+        const l = Math.hypot(mx, mz); mx /= l; mz /= l;
+
+        let vel = corriendo ? CFG.movimiento.velocidadCorrer : CFG.movimiento.velocidadCaminar;
+        if (unica && !jugador.enAire) vel *= CFG.movimiento.factorAlAtacar;
+        if (jugador.carga) vel *= jugador.carga.tipo.factorVel || 1;
+        const k = Math.min(1, Math.hypot(ix, iz));
+        jugador.pos.x += mx * vel * k * dt;
+        jugador.pos.z += mz * vel * k * dt;
+        colisiones(jugador.pos);
+        colisionCajas(jugador.pos);
+
+        const objetivo = Math.atan2(mx, mz);
+        const d = Math.atan2(Math.sin(objetivo - jugador.rot), Math.cos(objetivo - jugador.rot));
+        jugador.rot += d * Math.min(1, dt * 12);
+      }
+
+      // --- Física vertical ---
+      const sueloY = alturaApoyo(jugador.pos.x, jugador.pos.z, 0.2, jugador.carga);
+      if (!jugador.enAire && jugador.pos.y > sueloY + 0.01) jugador.enAire = true;
+
+      if (jugador.enAire || jugador.vy !== 0) {
+        const S = CFG.salto;
+        let g = jugador.vy > 0 ? S.gravedad : S.gravedadCaida;
+        if (Math.abs(jugador.vy) < S.umbralApice) g *= S.factorApice;
+        jugador.vy = Math.max(jugador.vy + g * dt, S.velocidadMaxCaida);
+        jugador.pos.y += jugador.vy * dt;
+        if (jugador.pos.y <= sueloY && jugador.vy <= 0) {
+          const impacto = Math.abs(jugador.vy);
+          jugador.pos.y = sueloY;
+          jugador.vy = 0;
+          if (jugador.enAire) {
+            jugador.enAire = false;
+            jugador.aterrizando = S.duracionAterrizaje;
+            jugador.fuerzaAterrizaje = Math.min(1, impacto / Math.abs(S.velocidadMaxCaida));
+          }
+        }
+      }
+
+      // --- Cajas ---
+      actualizarCajas(dt);
+      $("btnAgarrar").classList.toggle("inactivo", !jugador.carga && !cajaCercana());
+
+      // --- Indicadores de selección ---
+      actualizarIndicadores();
+
+      // --- Botón MOVER: visible solo cuando hay caja grande cerca ---
+      const hayGrande = !!cajaGrandeCercana();
+      $("btnMover").classList.toggle("oculto", !hayGrande && !jugador.moviendo);
+
+      // --- Selección de animación ---
+      let anim;
+      if (unica) {
+        unica.t += dt;
+        if (unica.t >= unica.dur) unica = null;
+        else anim = unica.anim;
+      }
+      if (!anim && jugador.enAire) anim = CFG.salto.animacionSalto;
+      if (!anim) anim = emote || (moviendo ? (corriendo ? "Correr" : "Camina") : "Esperar");
+
+      if (anim !== animActual) {
+        animActual = anim; tAnim = 0;
+        botones.forEach((b, k) => b.classList.toggle("activo", k === anim));
+      } else tAnim += dt;
+
+      const m = jugador.modelo;
+      m.animar(unica ? unica.t : tAnim, anim);
+      m.raiz.position.copy(jugador.pos);
+      m.raiz.rotation.y = jugador.rot;
+
+      // Amortiguación visual del aterrizaje
+      if (jugador.aterrizando > 0) {
+        jugador.aterrizando = Math.max(0, jugador.aterrizando - dt);
+        const k = jugador.aterrizando / CFG.salto.duracionAterrizaje;
+        const sq = Math.sin(k * Math.PI) * 0.12 * (0.4 + 0.6 * jugador.fuerzaAterrizaje);
+        m.raiz.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
+      } else {
+        m.raiz.scale.set(1, 1, 1);
+      }
+
+      // --- Sonido de pasos ---
+      if (moviendo && !jugador.enAire && window.AudioJuego && AudioJuego.listo) {
+        const ritmo = corriendo ? CFG.sonidos.paso.ritmoCorrer : CFG.sonidos.paso.ritmoCaminar;
+        pasoAcum += dt;
+        if (pasoAcum >= ritmo) {
+          pasoAcum = 0;
+          AudioJuego.paso({ corriendo });
+        }
+      } else {
+        pasoAcum = 0;
+      }
+
+      // --- Mundo vivo ---
+      cristal.rotation.y += dt * 1.2;
+      cristal.position.y = 3.2 + Math.sin(reloj * 2) * 0.2;
+      aro.material.emissiveIntensity = 0.4 + Math.sin(reloj * 2.5) * 0.25;
+      for (const n of nubes) {
+        n.position.x += dt * 0.8;
+        if (n.position.x > 80) n.position.x = -80;
+      }
+
+      sol.position.set(jugador.pos.x + 12, 22, jugador.pos.z + 8);
+      sol.target.position.copy(jugador.pos);
+      actualizarCamara(dt);
+    }
+
+    // ---------- Inicio ----------
+    equipar(localStorage.getItem(CFG.defaults.storageSkin) || CFG.defaults.skin, false);
+    foco.set(jugador.pos.x, 1.5, jugador.pos.z);
+
+    if (window.AudioJuego) {
+      AudioJuego.init(CFG).catch(err => console.warn("Audio del jugador no disponible:", err));
+    }
+
+    let anterior = performance.now();
+    function bucle(ahora) {
+      requestAnimationFrame(bucle);
+      const dt = Math.min((ahora - anterior) / 1000, 0.05);
+      anterior = ahora;
+      if (!document.hidden) actualizar(dt);
+      renderer.render(escena, camara);
+    }
+    requestAnimationFrame(bucle);
+
+    setTimeout(() => $("carga").classList.add("fuera"), 350);
+    setTimeout(() => toast("Pulsa P para abrir tu perfil y cambiar de skin"), 1200);
+
+    lienzo.addEventListener("webglcontextlost", e => {
+      e.preventDefault();
+      toast("Se perdió el contexto gráfico. Recarga la página.");
+    });
+  })();
   </script>
 </body>
 </html>
