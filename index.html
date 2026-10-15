@@ -591,11 +591,7 @@
     for (const ev of ["pointerup", "pointercancel"]) {
       joyEl.addEventListener(ev, () => { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ""; });
     } */
-     for (const ev of ["pointerup", "pointercancel"]) {
-      lienzo.addEventListener(ev, e => {
-        if (arrastre && arrastre.id === e.pointerId) arrastre = null;
-      });
-    }
+     
 
     
     // Botones físicos: pointerdown funciona en multitáctil (joystick + botón a la vez)
@@ -631,13 +627,19 @@ botonFisico($("btnCorrer"), () => {
       pitch = T.MathUtils.clamp(pitch + (e.clientY - arrastre.y) * 0.005, 0.08, 1.2);
       arrastre.x = e.clientX; arrastre.y = e.clientY;
     });
+    /*
     for (const ev of ["pointerup", "pointercancel"]) {
   joyEl.addEventListener(ev, e => {
     if (e.pointerId !== joy.id) return;
     joy.id = null; joy.x = joy.y = 0; knob.style.transform = "";
   });
 }
-
+*/
+    for (const ev of ["pointerup", "pointercancel"]) {
+      lienzo.addEventListener(ev, e => {
+        if (arrastre && arrastre.id === e.pointerId) arrastre = null;
+      });
+    }
     lienzo.addEventListener("wheel", e => {
       e.preventDefault();
       dist = T.MathUtils.clamp(dist + e.deltaY * 0.01, 4.5, 18);
