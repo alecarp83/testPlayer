@@ -296,7 +296,7 @@ kbd {
 
 <div class="hud">
   <div class="top">
-    <div class="brand">PARTY QUEST<small>UNA MISIÓN ESPECIAL</small></div>
+    <div class="brand">UN DIA MUY ESPECIAL<small>TE ESPERA UNA SORPRESA</small></div>
     <div class="pill">MUNDO DE CUMPLEAÑOS</div>
   </div>
   <section class="mission">
@@ -435,10 +435,10 @@ box(scene, [10, 1.2, 9], [0, -2.5, 0], "#584a92");     // antes #8273ae
 
   // Camino y plataforma.
   for (let i = 0; i < 8; i++) {
-    const tile = box(scene, [2.3, .13, .85], [Math.sin(i * .55) * .4, .23, 5.8 - i * 1.2], "#fff1da");
+    const tile = box(scene, [2.3, .13, .85], [Math.sin(i * .55) * .4, .23, 5.8 - i * 1.2], "#ffe0a8");
     tile.rotation.y = Math.sin(i) * .09;
   }
-  const pedestal = new T.Mesh(new T.CylinderGeometry(2.55, 2.7, .32, 48), mat("#eee4ff"));
+  const pedestal = new T.Mesh(new T.CylinderGeometry(2.55, 2.7, .32, 48), mat("#d9c6ff"));
   pedestal.position.set(0, .31, -4);
   pedestal.receiveShadow = true;
   scene.add(pedestal);
