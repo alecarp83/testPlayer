@@ -382,8 +382,8 @@ try {
 function iniciar(T) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const scene = new T.Scene();
-  scene.background = new T.Color("#c9c8ed");
-  scene.fog = new T.Fog("#c9c8ed", 24, 55);
+  scene.background = new T.Color("#a9a3e8");
+  scene.fog = new T.Fog("#a9a3e8", 22, 52);
 
   const camera = new T.PerspectiveCamera(43, innerWidth / innerHeight, .1, 100);
   const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
