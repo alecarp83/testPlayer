@@ -582,13 +582,25 @@
     for (const ev of ["pointerup", "pointercancel"]) {
       joyEl.addEventListener(ev, () => { joy.id = null; joy.x = joy.y = 0; knob.style.transform = ""; });
     }
-    $("btnCorrer").addEventListener("click", () => {
-      correrMovil = !correrMovil;
-      $("btnCorrer").classList.toggle("activo", correrMovil);
-    });
+    
+    // Botones físicos: pointerdown funciona en multitáctil (joystick + botón a la vez)
+function botonFisico(el, accion) {
+  el.tabIndex = -1; // evita que el botón tome el foco y capture Space/Enter
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    accion();
+  });
+  el.addEventListener("click", e => e.preventDefault());
+}
 
-    // ---------- Botón físico Saltar ----------
-    $("btnSaltar").addEventListener("click", () => intentarSalto());
+botonFisico($("btnSaltar"), intentarSalto);
+
+botonFisico($("btnCorrer"), () => {
+  correrMovil = !correrMovil;
+  $("btnCorrer").classList.toggle("activo", correrMovil);
+});
+
 
     // ---------- Cámara orbital ----------
     let yaw = 0, pitch = 0.42, dist = 9;
@@ -601,7 +613,13 @@
       pitch = T.MathUtils.clamp(pitch + (e.clientY - arrastre.y) * 0.005, 0.08, 1.2);
       arrastre.x = e.clientX; arrastre.y = e.clientY;
     });
-    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) lienzo.addEventListener(ev, () => arrastre = null);
+    for (const ev of ["pointerup", "pointercancel"]) {
+  joyEl.addEventListener(ev, e => {
+    if (e.pointerId !== joy.id) return;
+    joy.id = null; joy.x = joy.y = 0; knob.style.transform = "";
+  });
+}
+
     lienzo.addEventListener("wheel", e => {
       e.preventDefault();
       dist = T.MathUtils.clamp(dist + e.deltaY * 0.01, 4.5, 18);
@@ -696,16 +714,9 @@
       }
 
       // --- Temporizador de aterrizaje ---
-      if (jugador.aterrizando > 0) {
-        jugador.aterrizando -= dt;
-        if (jugador.aterrizando < 0) jugador.aterrizando = 0;
-      }
-
-      // --- Selección de animación ---
+            // --- Selección de animación (sin estado de aterrizaje) ---
       let anim;
-      if (jugador.aterrizando > 0) {
-        anim = CFG.salto.animacionAterrizaje;
-      } else if (jugador.enAire) {
+      if (jugador.enAire) {
         anim = CFG.salto.animacionSalto;
       } else if (unica) {
         unica.t += dt;
@@ -721,14 +732,11 @@
       } else tAnim += dt;
 
       const m = jugador.modelo;
+      m.animar(unica ? unica.t : tAnim, anim);
+      // La física manda: se fija la posición DESPUÉS de animar
       m.raiz.position.copy(jugador.pos);
       m.raiz.rotation.y = jugador.rot;
 
-      // La animación "Aterrizaje" todavía no existe en sheet_personajes.js:
-      // se usa "Saltar" como aproximación hasta que se añada.
-      const animParaModelo =
-        anim === CFG.salto.animacionAterrizaje ? CFG.salto.animacionSalto : anim;
-      m.animar(unica ? unica.t : tAnim, animParaModelo);
 
       // --- Sonido de pasos ---
       if (moviendo && !jugador.enAire && jugador.aterrizando === 0 &&
