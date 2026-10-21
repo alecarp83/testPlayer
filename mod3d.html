@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Prueba modelo GLB en mapa 3D</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #111; }
+    #info {
+      position: absolute; top: 10px; left: 10px; color: #fff;
+      font-family: sans-serif; font-size: 14px; z-index: 10;
+      background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">Cargando modelo...</div>
+
+  <!-- Import map para resolver los módulos de three -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    // ---------- 1. Escena, cámara y renderer ----------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb); // cielo
+    scene.fog = new THREE.Fog(0x87ceeb, 20, 60);
+
+    const camera = new THREE.PerspectiveCamera(
+      60, window.innerWidth / window.innerHeight, 0.1, 1000
+    );
+    camera.position.set(8, 6, 10);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // ---------- 2. Controles ----------
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1, 0);
+    controls.enableDamping = true;
+
+    // ---------- 3. Luces ----------
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(10, 15, 8);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.left = -15;
+    sun.shadow.camera.right = 15;
+    sun.shadow.camera.top = 15;
+    sun.shadow.camera.bottom = -15;
+    scene.add(sun);
+
+    // ---------- 4. Mapa pequeño ----------
+    // Suelo (hierba)
+    const groundGeo = new THREE.PlaneGeometry(20, 20);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a7d3a });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Cuadrícula para referencia visual
+    const grid = new THREE.GridHelper(20, 20, 0x000000, 0x000000);
+    grid.material.opacity = 0.15;
+    grid.material.transparent = true;
+    scene.add(grid);
+
+    // Función auxiliar para crear cajas (paredes / obstáculos)
+    function addBox(w, h, d, x, y, z, color) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color })
+      );
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    // Cuatro paredes perimetrales
+    addBox(20, 1, 0.5,  0, 0.5, -10, 0x8b5a2b); // norte
+    addBox(20, 1, 0.5,  0, 0.5,  10, 0x8b5a2b); // sur
+    addBox(0.5, 1, 20, -10, 0.5, 0, 0x8b5a2b); // oeste
+    addBox(0.5, 1, 20,  10, 0.5, 0, 0x8b5a2b); // este
+
+    // Algunos obstáculos (cajas) alrededor
+    addBox(1.5, 1.5, 1.5, -5, 0.75, -5, 0xcc6633);
+    addBox(2, 1, 2,        5, 0.5,  -4, 0x3366cc);
+    addBox(1, 2, 1,       -6, 1.0,   5, 0xcc3366);
+    addBox(2.5, 0.5, 2.5,  6, 0.25,  6, 0x9966cc);
+
+    // ---------- 5. Cargar el modelo GLB ----------
+    const MODEL_URL =
+      'https://raw.githubusercontent.com/alecarp83/testPlayer/main/fixing_kneeling.glb';
+
+    const loader = new GLTFLoader();
+    let mixer = null;
+    const infoDiv = document.getElementById('info');
+
+    loader.load(
+      MODEL_URL,
+      (gltf) => {
+        const model = gltf.scene;
+
+        // Habilitar sombras en todas las mallas del modelo
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
+        });
+
+        // Ajuste automático de escala: normalizar a ~2 unidades de alto
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const desiredSize = 2;
+        if (maxDim > 0) {
+          model.scale.multiplyScalar(desiredSize / maxDim);
+        }
+
+        // Reposicionar para que los pies queden en el suelo (y=0)
+        const box2 = new THREE.Box3().setFromObject(model);
+        model.position.y -= box2.min.y;
+
+        // Centrar en el origen en XZ
+        const center = new THREE.Vector3();
+        box2.getCenter(center);
+        model.position.x -= center.x;
+        model.position.z -= center.z;
+
+        scene.add(model);
+
+        // Reproducir animaciones si las tiene
+        if (gltf.animations && gltf.animations.length > 0) {
+          mixer = new THREE.AnimationMixer(model);
+          gltf.animations.forEach((clip) => {
+            mixer.clipAction(clip).play();
+          });
+          infoDiv.textContent =
+            `Modelo cargado ✔  (${gltf.animations.length} animación/animaciones)`;
+        } else {
+          infoDiv.textContent = 'Modelo cargado ✔  (sin animaciones)';
+        }
+      },
+      (xhr) => {
+        if (xhr.total > 0) {
+          const pct = ((xhr.loaded / xhr.total) * 100).toFixed(1);
+          infoDiv.textContent = `Cargando modelo... ${pct}%`;
+        } else {
+          infoDiv.textContent = `Cargando modelo... ${(xhr.loaded / 1024).toFixed(1)} KB`;
+        }
+      },
+      (error) => {
+        console.error('Error al cargar el modelo:', error);
+        infoDiv.textContent = '❌ Error al cargar el modelo (revisa la consola)';
+        infoDiv.style.background = 'rgba(180,0,0,0.7)';
+      }
+    );
+
+    // ---------- 6. Animación / render loop ----------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      if (mixer) mixer.update(delta);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // ---------- 7. Responsive ----------
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
