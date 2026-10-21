@@ -40,8 +40,8 @@
   <div id="info">Cargando modelo...</div>
 
   <div id="animPanel">
-    <button id="btnThrow" disabled>Overhand Throw</button>
-    <button id="btnPickup" disabled>Pickup Table</button>
+    <button id="btnThrow" disabled>Anim01</button>
+    <button id="btnPickup" disabled>Anim02</button>
   </div>
 
   <script type="importmap">
@@ -189,8 +189,8 @@
           `Modelo cargado ✔  Animaciones: ${gltf.animations.map(a => a.name).join(', ')}`;
 
         // Habilitar los botones de las animaciones que existan
-        if (actions['anim01']) btnThrow.disabled = false;
-        if (actions['anim02']) btnPickup.disabled = false;
+        if (actions['anim0a']) btnThrow.disabled = false;
+        if (actions['anim0b']) btnPickup.disabled = false;
 
         // Reproducir la primera por defecto
         const firstName = gltf.animations[0].name;
@@ -233,13 +233,13 @@
       currentAction = next;
 
       // Actualizar estado visual de los botones
-      btnThrow.classList.toggle('active', name === 'anim01');
-      btnPickup.classList.toggle('active', name === 'anim02');
+      btnThrow.classList.toggle('active', name === 'anim0a');
+      btnPickup.classList.toggle('active', name === 'anim0b');
     }
 
     // --- Listeners de los botones ---
-    btnThrow.addEventListener('click', () => playAnimation('anim01'));
-    btnPickup.addEventListener('click', () => playAnimation('anim02'));
+    btnThrow.addEventListener('click', () => playAnimation('anim0a'));
+    btnPickup.addEventListener('click', () => playAnimation('anim0b'));
 
     // ---------- 6. Render loop ----------
     const clock = new THREE.Clock();
