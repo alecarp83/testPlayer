@@ -189,8 +189,8 @@
           `Modelo cargado ✔  Animaciones: ${gltf.animations.map(a => a.name).join(', ')}`;
 
         // Habilitar los botones de las animaciones que existan
-        if (actions['overhandthrow']) btnThrow.disabled = false;
-        if (actions['pickup_table']) btnPickup.disabled = false;
+        if (actions['anim01']) btnThrow.disabled = false;
+        if (actions['anim02']) btnPickup.disabled = false;
 
         // Reproducir la primera por defecto
         const firstName = gltf.animations[0].name;
@@ -233,13 +233,13 @@
       currentAction = next;
 
       // Actualizar estado visual de los botones
-      btnThrow.classList.toggle('active', name === 'overhandthrow');
-      btnPickup.classList.toggle('active', name === 'pickup_table');
+      btnThrow.classList.toggle('active', name === 'anim01');
+      btnPickup.classList.toggle('active', name === 'anim02');
     }
 
     // --- Listeners de los botones ---
-    btnThrow.addEventListener('click', () => playAnimation('overhandthrow'));
-    btnPickup.addEventListener('click', () => playAnimation('pickup_table'));
+    btnThrow.addEventListener('click', () => playAnimation('anim01'));
+    btnPickup.addEventListener('click', () => playAnimation('anim02'));
 
     // ---------- 6. Render loop ----------
     const clock = new THREE.Clock();
