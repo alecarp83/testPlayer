@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Prueba modelo GLB en mapa 3D</title>
+  <title>Prueba modelo GLB con animaciones</title>
   <style>
     body { margin: 0; overflow: hidden; background: #111; }
     #info {
@@ -10,12 +10,40 @@
       font-family: sans-serif; font-size: 14px; z-index: 10;
       background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 6px;
     }
+    #animPanel {
+      position: absolute; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 10px; z-index: 10;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 14px; border-radius: 10px;
+    }
+    #animPanel button {
+      padding: 10px 18px;
+      font-family: sans-serif; font-size: 14px;
+      color: #fff; background: #3366cc;
+      border: none; border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    #animPanel button:hover { background: #4477dd; }
+    #animPanel button:active { transform: scale(0.96); }
+    #animPanel button.active {
+      background: #22aa55;
+      box-shadow: 0 0 8px #22aa55;
+    }
+    #animPanel button:disabled {
+      background: #555; cursor: not-allowed; opacity: 0.6;
+    }
   </style>
 </head>
 <body>
   <div id="info">Cargando modelo...</div>
 
-  <!-- Import map para resolver los módulos de three -->
+  <div id="animPanel">
+    <button id="btnThrow" disabled>Overhand Throw</button>
+    <button id="btnPickup" disabled>Pickup Table</button>
+  </div>
+
   <script type="importmap">
   {
     "imports": {
@@ -32,7 +60,7 @@
 
     // ---------- 1. Escena, cámara y renderer ----------
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb); // cielo
+    scene.background = new THREE.Color(0x87ceeb);
     scene.fog = new THREE.Fog(0x87ceeb, 20, 60);
 
     const camera = new THREE.PerspectiveCamera(
@@ -53,8 +81,7 @@
     controls.enableDamping = true;
 
     // ---------- 3. Luces ----------
-    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambient);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
     const sun = new THREE.DirectionalLight(0xffffff, 1.2);
     sun.position.set(10, 15, 8);
@@ -67,21 +94,19 @@
     scene.add(sun);
 
     // ---------- 4. Mapa pequeño ----------
-    // Suelo (hierba)
-    const groundGeo = new THREE.PlaneGeometry(20, 20);
-    const groundMat = new THREE.MeshStandardMaterial({ color: 0x3a7d3a });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(20, 20),
+      new THREE.MeshStandardMaterial({ color: 0x3a7d3a })
+    );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Cuadrícula para referencia visual
     const grid = new THREE.GridHelper(20, 20, 0x000000, 0x000000);
     grid.material.opacity = 0.15;
     grid.material.transparent = true;
     scene.add(grid);
 
-    // Función auxiliar para crear cajas (paredes / obstáculos)
     function addBox(w, h, d, x, y, z, color) {
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(w, h, d),
@@ -91,35 +116,36 @@
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       scene.add(mesh);
-      return mesh;
     }
 
-    // Cuatro paredes perimetrales
-    addBox(20, 1, 0.5,  0, 0.5, -10, 0x8b5a2b); // norte
-    addBox(20, 1, 0.5,  0, 0.5,  10, 0x8b5a2b); // sur
-    addBox(0.5, 1, 20, -10, 0.5, 0, 0x8b5a2b); // oeste
-    addBox(0.5, 1, 20,  10, 0.5, 0, 0x8b5a2b); // este
+    addBox(20, 1, 0.5,  0, 0.5, -10, 0x8b5a2b);
+    addBox(20, 1, 0.5,  0, 0.5,  10, 0x8b5a2b);
+    addBox(0.5, 1, 20, -10, 0.5, 0, 0x8b5a2b);
+    addBox(0.5, 1, 20,  10, 0.5, 0, 0x8b5a2b);
 
-    // Algunos obstáculos (cajas) alrededor
     addBox(1.5, 1.5, 1.5, -5, 0.75, -5, 0xcc6633);
     addBox(2, 1, 2,        5, 0.5,  -4, 0x3366cc);
     addBox(1, 2, 1,       -6, 1.0,   5, 0xcc3366);
     addBox(2.5, 0.5, 2.5,  6, 0.25,  6, 0x9966cc);
 
-    // ---------- 5. Cargar el modelo GLB ----------
+    // ---------- 5. Cargar el modelo GLB y sus animaciones ----------
     const MODEL_URL =
       'https://raw.githubusercontent.com/alecarp83/testPlayer/main/fixing_kneeling.glb';
 
     const loader = new GLTFLoader();
     let mixer = null;
+    const actions = {};         // acciones indexadas por nombre de clip
+    let currentAction = null;   // acción que está sonando actualmente
+
     const infoDiv = document.getElementById('info');
+    const btnThrow = document.getElementById('btnThrow');
+    const btnPickup = document.getElementById('btnPickup');
 
     loader.load(
       MODEL_URL,
       (gltf) => {
         const model = gltf.scene;
 
-        // Habilitar sombras en todas las mallas del modelo
         model.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
@@ -127,21 +153,15 @@
           }
         });
 
-        // Ajuste automático de escala: normalizar a ~2 unidades de alto
+        // Escalado y ajuste al suelo
         const box = new THREE.Box3().setFromObject(model);
         const size = new THREE.Vector3();
         box.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const desiredSize = 2;
-        if (maxDim > 0) {
-          model.scale.multiplyScalar(desiredSize / maxDim);
-        }
+        if (maxDim > 0) model.scale.multiplyScalar(2 / maxDim);
 
-        // Reposicionar para que los pies queden en el suelo (y=0)
         const box2 = new THREE.Box3().setFromObject(model);
         model.position.y -= box2.min.y;
-
-        // Centrar en el origen en XZ
         const center = new THREE.Vector3();
         box2.getCenter(center);
         model.position.x -= center.x;
@@ -149,34 +169,79 @@
 
         scene.add(model);
 
-        // Reproducir animaciones si las tiene
-        if (gltf.animations && gltf.animations.length > 0) {
-          mixer = new THREE.AnimationMixer(model);
-          gltf.animations.forEach((clip) => {
-            mixer.clipAction(clip).play();
-          });
-          infoDiv.textContent =
-            `Modelo cargado ✔  (${gltf.animations.length} animación/animaciones)`;
-        } else {
-          infoDiv.textContent = 'Modelo cargado ✔  (sin animaciones)';
+        // --- Configurar animaciones ---
+        mixer = new THREE.AnimationMixer(model);
+
+        if (gltf.animations.length === 0) {
+          infoDiv.textContent = 'Modelo cargado ✔ (sin animaciones)';
+          return;
         }
+
+        gltf.animations.forEach((clip) => {
+          const action = mixer.clipAction(clip);
+          // Que no se quede en el último frame: vuelve al inicio al terminar
+          action.loop = THREE.LoopRepeat;
+          actions[clip.name] = action;
+          console.log('Animación disponible:', clip.name);
+        });
+
+        infoDiv.textContent =
+          `Modelo cargado ✔  Animaciones: ${gltf.animations.map(a => a.name).join(', ')}`;
+
+        // Habilitar los botones de las animaciones que existan
+        if (actions['overhandthrow']) btnThrow.disabled = false;
+        if (actions['pickup_table']) btnPickup.disabled = false;
+
+        // Reproducir la primera por defecto
+        const firstName = gltf.animations[0].name;
+        playAnimation(firstName);
       },
       (xhr) => {
         if (xhr.total > 0) {
           const pct = ((xhr.loaded / xhr.total) * 100).toFixed(1);
           infoDiv.textContent = `Cargando modelo... ${pct}%`;
-        } else {
-          infoDiv.textContent = `Cargando modelo... ${(xhr.loaded / 1024).toFixed(1)} KB`;
         }
       },
       (error) => {
         console.error('Error al cargar el modelo:', error);
-        infoDiv.textContent = '❌ Error al cargar el modelo (revisa la consola)';
+        infoDiv.textContent = '❌ Error al cargar el modelo';
         infoDiv.style.background = 'rgba(180,0,0,0.7)';
       }
     );
 
-    // ---------- 6. Animación / render loop ----------
+    // --- Función para cambiar de animación con transición suave ---
+    function playAnimation(name, fadeDuration = 0.3) {
+      const next = actions[name];
+      if (!next) {
+        console.warn('Animación no encontrada:', name);
+        return;
+      }
+      if (currentAction === next) return; // ya está sonando
+
+      // Resetear la acción destino para que empiece desde el inicio
+      next.reset();
+      next.setEffectiveTimeScale(1);
+      next.setEffectiveWeight(1);
+      next.fadeIn(fadeDuration);
+      next.play();
+
+      // Apagar la acción anterior suavemente
+      if (currentAction) {
+        currentAction.fadeOut(fadeDuration);
+      }
+
+      currentAction = next;
+
+      // Actualizar estado visual de los botones
+      btnThrow.classList.toggle('active', name === 'overhandthrow');
+      btnPickup.classList.toggle('active', name === 'pickup_table');
+    }
+
+    // --- Listeners de los botones ---
+    btnThrow.addEventListener('click', () => playAnimation('overhandthrow'));
+    btnPickup.addEventListener('click', () => playAnimation('pickup_table'));
+
+    // ---------- 6. Render loop ----------
     const clock = new THREE.Clock();
 
     function animate() {
