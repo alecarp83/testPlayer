@@ -1,48 +1,59 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Prueba modelo GLB con animaciones</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Personaje con joystick táctil</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #111; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #111; font-family: sans-serif; }
+    canvas { display: block; }
+
     #info {
       position: absolute; top: 10px; left: 10px; color: #fff;
-      font-family: sans-serif; font-size: 14px; z-index: 10;
-      background: rgba(0,0,0,0.5); padding: 8px 12px; border-radius: 6px;
+      font-size: 13px; z-index: 10; background: rgba(0,0,0,0.5);
+      padding: 6px 10px; border-radius: 6px; pointer-events: none;
     }
-    #animPanel {
-      position: absolute; bottom: 20px; left: 50%;
-      transform: translateX(-50%);
-      display: flex; gap: 10px; z-index: 10;
-      background: rgba(0,0,0,0.6);
-      padding: 10px 14px; border-radius: 10px;
+
+    /* ---- Joystick ---- */
+    #joystickZone {
+      position: absolute; bottom: 30px; left: 30px;
+      width: 140px; height: 140px; z-index: 20;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.35);
+      touch-action: none;
     }
-    #animPanel button {
-      padding: 10px 18px;
-      font-family: sans-serif; font-size: 14px;
-      color: #fff; background: #3366cc;
-      border: none; border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+    #joystickKnob {
+      position: absolute; top: 50%; left: 50%;
+      width: 60px; height: 60px; margin: -30px 0 0 -30px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.75);
+      box-shadow: 0 0 12px rgba(0,0,0,0.4);
+      pointer-events: none;
     }
-    #animPanel button:hover { background: #4477dd; }
-    #animPanel button:active { transform: scale(0.96); }
-    #animPanel button.active {
-      background: #22aa55;
-      box-shadow: 0 0 8px #22aa55;
+
+    /* ---- Botón Atacar ---- */
+    #attackBtn {
+      position: absolute; bottom: 45px; right: 35px;
+      width: 110px; height: 110px; z-index: 20;
+      border-radius: 50%; border: none;
+      background: radial-gradient(circle at 35% 30%, #ff6666, #cc1111);
+      color: #fff; font-size: 18px; font-weight: bold;
+      box-shadow: 0 0 18px rgba(200,0,0,0.6);
+      touch-action: none; cursor: pointer;
     }
-    #animPanel button:disabled {
-      background: #555; cursor: not-allowed; opacity: 0.6;
-    }
+    #attackBtn:active { transform: scale(0.94); }
+    #attackBtn:disabled { background: #555; box-shadow: none; opacity: 0.6; }
   </style>
 </head>
 <body>
-  <div id="info">Cargando modelo...</div>
+  <div id="info">Cargando...</div>
 
-  <div id="animPanel">
-    <button id="btnThrow" disabled>Anim01</button>
-    <button id="btnPickup" disabled>Anim02</button>
+  <div id="joystickZone">
+    <div id="joystickKnob"></div>
   </div>
+  <button id="attackBtn" disabled>ATACAR</button>
 
   <script type="importmap">
   {
@@ -58,33 +69,34 @@
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-    // ---------- 1. Escena, cámara y renderer ----------
+    // ============ 1. Escena, cámara, renderer ============
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb, 20, 60);
+    scene.fog = new THREE.Fog(0x87ceeb, 20, 70);
 
-    const camera = new THREE.PerspectiveCamera(
-      60, window.innerWidth / window.innerHeight, 0.1, 1000
-    );
-    camera.position.set(8, 6, 10);
+    const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.1, 1000);
+    camera.position.set(0, 4, 9);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    // ---------- 2. Controles ----------
+    // Controles de cámara (rotar con dos dedos / ratón)
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0, 1, 0);
     controls.enableDamping = true;
+    controls.enablePan = false;
+    controls.minDistance = 4;
+    controls.maxDistance = 18;
+    // El joystick y el botón capturan sus propios eventos, no interfieren
 
-    // ---------- 3. Luces ----------
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(10, 15, 8);
+    // ============ 2. Luces ============
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+    sun.position.set(10, 18, 8);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.left = -15;
@@ -93,171 +105,324 @@
     sun.shadow.camera.bottom = -15;
     scene.add(sun);
 
-    // ---------- 4. Mapa pequeño ----------
+    // ============ 3. Mapa ============
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(20, 20),
+      new THREE.PlaneGeometry(40, 40),
       new THREE.MeshStandardMaterial({ color: 0x3a7d3a })
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    const grid = new THREE.GridHelper(20, 20, 0x000000, 0x000000);
-    grid.material.opacity = 0.15;
+    const grid = new THREE.GridHelper(40, 40, 0x000000, 0x000000);
+    grid.material.opacity = 0.12;
     grid.material.transparent = true;
     scene.add(grid);
 
     function addBox(w, h, d, x, y, z, color) {
-      const mesh = new THREE.Mesh(
+      const m = new THREE.Mesh(
         new THREE.BoxGeometry(w, h, d),
         new THREE.MeshStandardMaterial({ color })
       );
-      mesh.position.set(x, y, z);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      scene.add(m);
     }
+    // Paredes lejanas
+    addBox(40, 1.5, 0.5,   0, 0.75, -20, 0x8b5a2b);
+    addBox(40, 1.5, 0.5,   0, 0.75,  20, 0x8b5a2b);
+    addBox(0.5, 1.5, 40, -20, 0.75,   0, 0x8b5a2b);
+    addBox(0.5, 1.5, 40,  20, 0.75,   0, 0x8b5a2b);
+    // Obstáculos
+    addBox(1.5, 1.5, 1.5, -6, 0.75, -6, 0xcc6633);
+    addBox(2, 1, 2,        6, 0.5,  -5, 0x3366cc);
+    addBox(1, 2, 1,       -7, 1.0,   6, 0xcc3366);
+    addBox(2.5, 0.5, 2.5,  7, 0.25,  7, 0x9966cc);
 
-    addBox(20, 1, 0.5,  0, 0.5, -10, 0x8b5a2b);
-    addBox(20, 1, 0.5,  0, 0.5,  10, 0x8b5a2b);
-    addBox(0.5, 1, 20, -10, 0.5, 0, 0x8b5a2b);
-    addBox(0.5, 1, 20,  10, 0.5, 0, 0x8b5a2b);
-
-    addBox(1.5, 1.5, 1.5, -5, 0.75, -5, 0xcc6633);
-    addBox(2, 1, 2,        5, 0.5,  -4, 0x3366cc);
-    addBox(1, 2, 1,       -6, 1.0,   5, 0xcc3366);
-    addBox(2.5, 0.5, 2.5,  6, 0.25,  6, 0x9966cc);
-
-    // ---------- 5. Cargar el modelo GLB y sus animaciones ----------
-    const MODEL_URL =
-      'https://raw.githubusercontent.com/alecarp83/testPlayer/main/fixing_kneeling.glb';
-
-    const loader = new GLTFLoader();
-    let mixer = null;
-    const actions = {};         // acciones indexadas por nombre de clip
-    let currentAction = null;   // acción que está sonando actualmente
+    // ============ 4. Estado del jugador ============
+    const player = {
+      root: new THREE.Group(),      // contenedor que movemos
+      models: {},                   // name -> gltf.scene
+      mixers: {},                   // name -> AnimationMixer
+      actions: {},                  // name -> AnimationAction
+      current: null,                // nombre del modelo activo
+      speed: 2.5,                   // unidades/segundo
+      moving: false,
+      attacking: false
+    };
+    scene.add(player.root);
 
     const infoDiv = document.getElementById('info');
-    const btnThrow = document.getElementById('btnThrow');
-    const btnPickup = document.getElementById('btnPickup');
+    const attackBtn = document.getElementById('attackBtn');
 
-    loader.load(
-      MODEL_URL,
-      (gltf) => {
-        const model = gltf.scene;
+    // ============ 5. Carga de modelos ============
+    // Todos en el mismo directorio que este index.html
+    const MODELS = {
+      idle:   { url: './sword_idle.glb',  loop: true  },
+      walk:   { url: './walk_loop.glb',   loop: true  },
+      attack: { url: './punch_cross.glb', loop: false }
+    };
 
-        model.traverse((child) => {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
+    const loader = new GLTFLoader();
+    let loadedCount = 0;
+
+    function loadModel(key) {
+      const { url } = MODELS[key];
+      return new Promise((resolve, reject) => {
+        loader.load(
+          url,
+          (gltf) => {
+            const model = gltf.scene;
+
+            // Sombras
+            model.traverse((c) => {
+              if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; }
+            });
+
+            // Escalar a ~1.8 unidades de alto (ajusta si tus modelos ya están bien)
+            const box = new THREE.Box3().setFromObject(model);
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) model.scale.multiplyScalar(1.8 / maxDim);
+
+            // Apoyar pies en el suelo y centrar en XZ
+            const box2 = new THREE.Box3().setFromObject(model);
+            model.position.y -= box2.min.y;
+            const c = new THREE.Vector3();
+            box2.getCenter(c);
+            model.position.x -= c.x;
+            model.position.z -= c.z;
+
+            // Mixer y acción
+            const mixer = new THREE.AnimationMixer(model);
+            let action = null;
+            if (gltf.animations.length > 0) {
+              const clip = gltf.animations[0];
+              action = mixer.clipAction(clip);
+              if (MODELS[key].loop) {
+                action.loop = THREE.LoopRepeat;
+              } else {
+                action.loop = THREE.LoopOnce;
+                action.clampWhenFinished = true;
+              }
+            }
+
+            player.models[key] = model;
+            player.mixers[key] = mixer;
+            player.actions[key] = action;
+
+            // El modelo arranca invisible; lo mostraremos al activarlo
+            model.visible = false;
+            player.root.add(model);
+
+            loadedCount++;
+            infoDiv.textContent = `Cargando... ${loadedCount}/${Object.keys(MODELS).length}`;
+            resolve();
+          },
+          undefined,
+          (err) => {
+            console.error(`Error cargando ${url}`, err);
+            infoDiv.textContent = `❌ Error al cargar ${url.split('/').pop()}`;
+            infoDiv.style.background = 'rgba(180,0,0,0.7)';
+            reject(err);
           }
-        });
-
-        // Escalado y ajuste al suelo
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        if (maxDim > 0) model.scale.multiplyScalar(2 / maxDim);
-
-        const box2 = new THREE.Box3().setFromObject(model);
-        model.position.y -= box2.min.y;
-        const center = new THREE.Vector3();
-        box2.getCenter(center);
-        model.position.x -= center.x;
-        model.position.z -= center.z;
-
-        scene.add(model);
-
-        // --- Configurar animaciones ---
-        mixer = new THREE.AnimationMixer(model);
-
-        if (gltf.animations.length === 0) {
-          infoDiv.textContent = 'Modelo cargado ✔ (sin animaciones)';
-          return;
-        }
-
-        gltf.animations.forEach((clip) => {
-          const action = mixer.clipAction(clip);
-          // Que no se quede en el último frame: vuelve al inicio al terminar
-          action.loop = THREE.LoopRepeat;
-          actions[clip.name] = action;
-          console.log('Animación disponible:', clip.name);
-        });
-
-        infoDiv.textContent =
-          `Modelo cargado ✔  Animaciones: ${gltf.animations.map(a => a.name).join(', ')}`;
-
-        // Habilitar los botones de las animaciones que existan
-        if (actions['anim0a']) btnThrow.disabled = false;
-        if (actions['anim0b']) btnPickup.disabled = false;
-
-        // Reproducir la primera por defecto
-        const firstName = gltf.animations[0].name;
-        playAnimation(firstName);
-      },
-      (xhr) => {
-        if (xhr.total > 0) {
-          const pct = ((xhr.loaded / xhr.total) * 100).toFixed(1);
-          infoDiv.textContent = `Cargando modelo... ${pct}%`;
-        }
-      },
-      (error) => {
-        console.error('Error al cargar el modelo:', error);
-        infoDiv.textContent = '❌ Error al cargar el modelo';
-        infoDiv.style.background = 'rgba(180,0,0,0.7)';
-      }
-    );
-
-    // --- Función para cambiar de animación con transición suave ---
-    function playAnimation(name, fadeDuration = 0.3) {
-      const next = actions[name];
-      if (!next) {
-        console.warn('Animación no encontrada:', name);
-        return;
-      }
-      if (currentAction === next) return; // ya está sonando
-
-      // Resetear la acción destino para que empiece desde el inicio
-      next.reset();
-      next.setEffectiveTimeScale(1);
-      next.setEffectiveWeight(1);
-      next.fadeIn(fadeDuration);
-      next.play();
-
-      // Apagar la acción anterior suavemente
-      if (currentAction) {
-        currentAction.fadeOut(fadeDuration);
-      }
-
-      currentAction = next;
-
-      // Actualizar estado visual de los botones
-      btnThrow.classList.toggle('active', name === 'anim0a');
-      btnPickup.classList.toggle('active', name === 'anim0b');
+        );
+      });
     }
 
-    // --- Listeners de los botones ---
-    btnThrow.addEventListener('click', () => playAnimation('anim0a'));
-    btnPickup.addEventListener('click', () => playAnimation('anim0b'));
+    // Cambiar de modelo activo con crossfade de animaciones
+    function setActive(key, fade = 0.25) {
+      if (player.current === key) return;
 
-    // ---------- 6. Render loop ----------
+      const prevKey = player.current;
+      player.current = key;
+
+      // Mostrar solo el nuevo modelo
+      Object.keys(player.models).forEach((k) => {
+        player.models[k].visible = (k === key);
+      });
+
+      // Crossfade de animaciones
+      const nextAction = player.actions[key];
+      const prevAction = prevKey ? player.actions[prevKey] : null;
+
+      if (nextAction) {
+        nextAction.reset();
+        nextAction.setEffectiveTimeScale(1);
+        nextAction.setEffectiveWeight(1);
+        nextAction.fadeIn(fade);
+        nextAction.play();
+      }
+      if (prevAction && prevAction !== nextAction) {
+        prevAction.fadeOut(fade);
+      }
+    }
+
+    // Iniciar todo cuando estén los 3 modelos
+    Promise.all(Object.keys(MODELS).map(loadModel))
+      .then(() => {
+        infoDiv.textContent = 'Listo ✔  Usa el joystick para moverte';
+        attackBtn.disabled = false;
+
+        // Estado inicial: idle
+        setActive('idle', 0);
+
+        // Cuando termine la animación de ataque, volver a idle (o a walk si sigue moviéndose)
+        player.mixers.attack.addEventListener('finished', () => {
+          player.attacking = false;
+          if (player.moving) {
+            setActive('walk', 0.15);
+          } else {
+            setActive('idle', 0.15);
+          }
+        });
+      })
+      .catch(() => {});
+
+    // ============ 6. Joystick táctil ============
+    const joyZone = document.getElementById('joystickZone');
+    const joyKnob = document.getElementById('joystickKnob');
+    const joyState = { active: false, x: 0, y: 0, pointerId: null };
+    const MAX_RADIUS = 50; // radio máximo del knob en px
+
+    function updateKnob(dx, dy) {
+      joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+    function resetJoystick() {
+      joyState.active = false;
+      joyState.x = 0; joyState.y = 0; joyState.pointerId = null;
+      updateKnob(0, 0);
+      updateMovementState();
+    }
+
+    joyZone.addEventListener('pointerdown', (e) => {
+      joyState.active = true;
+      joyState.pointerId = e.pointerId;
+      joyZone.setPointerCapture(e.pointerId);
+      handleJoyMove(e);
+    });
+    joyZone.addEventListener('pointermove', (e) => {
+      if (!joyState.active || e.pointerId !== joyState.pointerId) return;
+      handleJoyMove(e);
+    });
+    joyZone.addEventListener('pointerup', (e) => {
+      if (e.pointerId === joyState.pointerId) resetJoystick();
+    });
+    joyZone.addEventListener('pointercancel', (e) => {
+      if (e.pointerId === joyState.pointerId) resetJoystick();
+    });
+
+    function handleJoyMove(e) {
+      const rect = joyZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let dx = e.clientX - cx;
+      let dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+
+      // Limitar dentro del radio
+      if (dist > MAX_RADIUS) {
+        dx = (dx / dist) * MAX_RADIUS;
+        dy = (dy / dist) * MAX_RADIUS;
+      }
+      updateKnob(dx, dy);
+
+      // Normalizar a [-1, 1]
+      joyState.x = dx / MAX_RADIUS;
+      joyState.y = dy / MAX_RADIUS;
+
+      updateMovementState();
+    }
+
+    // Decidir si el personaje camina o está idle
+    function updateMovementState() {
+      const magnitude = Math.hypot(joyState.x, joyState.y);
+      const isMoving = magnitude > 0.15;
+      player.moving = isMoving;
+
+      if (player.attacking) return; // no interrumpir ataque
+
+      if (isMoving) {
+        setActive('walk', 0.2);
+      } else {
+        setActive('idle', 0.2);
+      }
+    }
+
+    // ============ 7. Botón Atacar ============
+    attackBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      triggerAttack();
+    });
+
+    function triggerAttack() {
+      if (player.attacking) return;
+      if (!player.actions.attack) return;
+
+      player.attacking = true;
+      setActive('attack', 0.1);
+
+      // Reiniciar la animación por si ya se había reproducido antes
+      player.actions.attack.reset().play();
+    }
+
+    // ============ 8. Loop de animación ============
     const clock = new THREE.Clock();
+    const WALK_FORWARD = new THREE.Vector3();
+    const camForward = new THREE.Vector3();
+    const camRight = new THREE.Vector3();
 
     function animate() {
       requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      if (mixer) mixer.update(delta);
+      const dt = Math.min(clock.getDelta(), 0.05);
+
+      // Actualizar mixers
+      Object.values(player.mixers).forEach((m) => m.update(dt));
+
+      // Movimiento del jugador
+      if (player.moving && !player.attacking) {
+        // Dirección relativa a la cámara (como en juegos 3D típicos)
+        camera.getWorldDirection(camForward);
+        camForward.y = 0;
+        camForward.normalize();
+        camRight.crossVectors(camForward, new THREE.Vector3(0, 1, 0)).normalize();
+
+        WALK_FORWARD.set(0, 0, 0)
+          .addScaledVector(camForward, -joyState.y) // joystick arriba = adelante
+          .addScaledVector(camRight, joyState.x)
+          .normalize();
+
+        if (WALK_FORWARD.lengthSq() > 0.001) {
+          // Mover al jugador
+          player.root.position.addScaledVector(WALK_FORWARD, player.speed * dt);
+
+          // Limitar al mapa (dentro de las paredes)
+          player.root.position.x = THREE.MathUtils.clamp(player.root.position.x, -19, 19);
+          player.root.position.z = THREE.MathUtils.clamp(player.root.position.z, -19, 19);
+
+          // Orientar el modelo hacia la dirección de movimiento (suavizado)
+          const targetAngle = Math.atan2(WALK_FORWARD.x, WALK_FORWARD.z);
+          const currentAngle = player.root.rotation.y;
+          let diff = targetAngle - currentAngle;
+          // Normalizar diferencia a [-PI, PI]
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          player.root.rotation.y += diff * Math.min(1, dt * 10);
+        }
+      }
+
       controls.update();
       renderer.render(scene, camera);
     }
     animate();
 
-    // ---------- 7. Responsive ----------
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+    // ============ 9. Responsive ============
+    addEventListener('resize', () => {
+      camera.aspect = innerWidth / innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(innerWidth, innerHeight);
     });
   </script>
 </body>
